@@ -1,4 +1,5 @@
 import { Probot } from "probot";
+import { lintUmbrelAppYml } from "umbrel-cli/dist/lib.js";
 
 const supportedFiles = [
   "umbrel-app.yml",
@@ -42,7 +43,8 @@ export default (app: Probot) => {
 
       switch (true) {
         case file.filename.endsWith("umbrel-app.yml"): {
-          lintUmbrelAppYml(content);
+          const result = await lintUmbrelAppYml(content);
+          console.log(result);
           break;
         }
       }
@@ -51,8 +53,3 @@ export default (app: Probot) => {
   });
 
 };
-
-function lintUmbrelAppYml(filecontent: string) {
-  console.log("linting umbrel-app.yml: " + filecontent)
-  return true;
-}
