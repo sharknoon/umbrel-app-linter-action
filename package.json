@@ -18,13 +18,13 @@
   },
   "dependencies": {
     "probot": "^13.0.1",
-    "umbrel-cli": "^0.3.5"
+    "umbrel-cli": "^0.3.6"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "nock": "^14.0.0-beta.5",
     "smee-client": "^2.0.0",
-    "typescript": "^5.3.3",
+    "typescript": "^5.5.3",
     "vitest": "^1.3.1"
   },
   "engines": {
