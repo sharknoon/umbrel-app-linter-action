@@ -1,6 +1,6 @@
-# umbrel-app-liner-action
+# Umbrel App Linter
 
-> A GitHub Action that checks your umbrelOS Apps for issues and provides fixes
+A GitHub Action that checks your umbrelOS Apps for issues and provides fixes
 
 ## Linting apps on Pull Requests
 
@@ -11,13 +11,13 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches:
+      - main
 
 jobs:
-  lint:
+  lint-apps:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
       - name: Linting umbrelOS Apps
         uses: sharknoon/umbrel-app-linter-action@1
         with:
@@ -38,10 +38,9 @@ on:
       - main
 
 jobs:
-  lint:
+  lint-apps:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
       - name: Linting umbrelOS Apps
         uses: sharknoon/umbrel-app-linter-action@1
         with:

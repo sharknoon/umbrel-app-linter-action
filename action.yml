@@ -3,7 +3,7 @@ author: "Josua Frank"
 description: "This is a small GitHub Action for linting umbrelOS apps"
 runs:
   using: "node20"
-  main: "main.js"
+  main: "dist/main.js"
 inputs:
   github-token:
     description: "GitHub token to access the repository"
