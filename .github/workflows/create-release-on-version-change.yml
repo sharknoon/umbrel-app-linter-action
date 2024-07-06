@@ -1,7 +1,6 @@
 name: Create release on version change
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - "main"
@@ -18,12 +17,12 @@ jobs:
         uses: EndBug/version-check@v2
         with:
           diff-search: true
-      - if: steps.check.outputs.changed == 'true'
+      - if: steps.check.outputs.changed == 'false'
         id: get_latest_tag
         run: |
           git fetch --tags
           echo "::set-output name=LATEST_TAG::$(git describe --tags $(git rev-list --tags --max-count=1))"
-      - if: steps.check.outputs.changed == 'true'
+      - if: steps.check.outputs.changed == 'false'
         uses: softprops/action-gh-release@v2
         with:
           draft: true
