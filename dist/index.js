@@ -36797,15 +36797,14 @@ try {
     // Create job summary
     _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading(title);
     _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading("Legend", 2);
-    _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addRaw(`❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`);
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addRaw(`\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`);
     for (const file of lintedFiles) {
         _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading(file.filename, 2);
         _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addTable([
             [
-                { data: "Severity 🚨", header: true },
-                { data: "ID 🪪", header: true },
-                { data: "Title ℹ️", header: true },
-                { data: "Message 💬", header: true },
+                { data: "🚨 Severity", header: true },
+                { data: "🪪 ID", header: true },
+                { data: "💬 Message", header: true },
             ],
             ...file.result.map((r) => [
                 r.severity === "error"
@@ -36814,8 +36813,7 @@ try {
                         ? "⚠️ Warning"
                         : "ℹ️ Info",
                 "<pre><code>" + r.id + "</code></pre>",
-                r.title,
-                r.message,
+                "<b>" + r.title + "</b>: " + r.message,
             ]),
         ]);
     }
@@ -36825,7 +36823,34 @@ try {
             owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
             repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
             issue_number: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request.number,
-            body: `## ${title}\n\nTODO`,
+            body: `## ${title}
+### Legend
+
+❌ **Error**  
+This must be resolved before this PR can be merged.
+
+
+⚠️ **Warning**  
+This is highly encouraged to be resolved, but is not strictly mandatory.
+
+
+ℹ️ **Info**  
+This is just for your information.
+
+${lintedFiles
+                .map((file) => {
+                return `#### ${file.filename}
+| 🚨 Severity | 🪪 ID | 💬 Message |
+| --- | --- | --- |
+${file.result
+                    .map((r) => `| ${r.severity === "error"
+                    ? "❌ Error"
+                    : r.severity === "warning"
+                        ? "⚠️ Warning"
+                        : "ℹ️ Info"} | \`${escapeMarkdown(r.id)}\` | **${escapeMarkdown(r.title)}**: ${escapeMarkdown(r.message)} |`)
+                    .join("\n")}`;
+            })
+                .join("\n\n")}`,
         });
     }
     // Finish the action
@@ -36836,6 +36861,27 @@ try {
 }
 catch (error) {
     (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed)(`Action failed with error ${error}`);
+}
+function escapeMarkdown(text) {
+    return text
+        .replaceAll("\\", "\\\\")
+        .replaceAll("`", "\\`")
+        .replaceAll("*", "\\*")
+        .replaceAll("_", "\\_")
+        .replaceAll("{", "\\{")
+        .replaceAll("}", "\\}")
+        .replaceAll("[", "\\[")
+        .replaceAll("]", "\\]")
+        .replaceAll("<", "\\<")
+        .replaceAll(">", "\\>")
+        .replaceAll("(", "\\(")
+        .replaceAll(")", "\\)")
+        .replaceAll("#", "\\#")
+        .replaceAll("+", "\\+")
+        .replaceAll("-", "\\-")
+        .replaceAll(".", "\\.")
+        .replaceAll("!", "\\!")
+        .replaceAll("|", "\\|");
 }
 
 __webpack_async_result__();

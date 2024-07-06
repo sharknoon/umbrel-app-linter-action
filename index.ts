@@ -173,16 +173,15 @@ try {
   summary.addHeading(title);
   summary.addHeading("Legend", 2);
   summary.addRaw(
-    `❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`
+    `\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`
   );
   for (const file of lintedFiles) {
     summary.addHeading(file.filename, 2);
     summary.addTable([
       [
-        { data: "Severity 🚨", header: true },
-        { data: "ID 🪪", header: true },
-        { data: "Title ℹ️", header: true },
-        { data: "Message 💬", header: true },
+        { data: "🚨 Severity", header: true },
+        { data: "🪪 ID", header: true },
+        { data: "💬 Message", header: true },
       ],
       ...file.result.map((r) => [
         r.severity === "error"
@@ -191,8 +190,7 @@ try {
           ? "⚠️ Warning"
           : "ℹ️ Info",
         "<pre><code>" + r.id + "</code></pre>",
-        r.title,
-        r.message,
+        "<b>" + r.title + "</b>: " + r.message,
       ]),
     ]);
   }
@@ -203,7 +201,41 @@ try {
       owner: context.repo.owner,
       repo: context.repo.repo,
       issue_number: context.payload.pull_request.number,
-      body: `## ${title}\n\nTODO`,
+      body: `## ${title}
+### Legend
+
+❌ **Error**  
+This must be resolved before this PR can be merged.
+
+
+⚠️ **Warning**  
+This is highly encouraged to be resolved, but is not strictly mandatory.
+
+
+ℹ️ **Info**  
+This is just for your information.
+
+${lintedFiles
+  .map((file) => {
+    return `#### ${file.filename}
+| 🚨 Severity | 🪪 ID | 💬 Message |
+| --- | --- | --- |
+${file.result
+  .map(
+    (r) =>
+      `| ${
+        r.severity === "error"
+          ? "❌ Error"
+          : r.severity === "warning"
+          ? "⚠️ Warning"
+          : "ℹ️ Info"
+      } | \`${escapeMarkdown(r.id)}\` | **${escapeMarkdown(
+        r.title
+      )}**: ${escapeMarkdown(r.message)} |`
+  )
+  .join("\n")}`;
+  })
+  .join("\n\n")}`,
     });
   }
 
@@ -214,4 +246,26 @@ try {
   }
 } catch (error) {
   setFailed(`Action failed with error ${error}`);
+}
+
+function escapeMarkdown(text: string): string {
+  return text
+    .replaceAll("\\", "\\\\")
+    .replaceAll("`", "\\`")
+    .replaceAll("*", "\\*")
+    .replaceAll("_", "\\_")
+    .replaceAll("{", "\\{")
+    .replaceAll("}", "\\}")
+    .replaceAll("[", "\\[")
+    .replaceAll("]", "\\]")
+    .replaceAll("<", "\\<")
+    .replaceAll(">", "\\>")
+    .replaceAll("(", "\\(")
+    .replaceAll(")", "\\)")
+    .replaceAll("#", "\\#")
+    .replaceAll("+", "\\+")
+    .replaceAll("-", "\\-")
+    .replaceAll(".", "\\.")
+    .replaceAll("!", "\\!")
+    .replaceAll("|", "\\|");
 }
