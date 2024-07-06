@@ -1,0 +1,19 @@
+name: "Umbrel App Linter"
+author: "Josua Frank"
+description: "This is a small GitHub Action for linting umbrelOS apps"
+runs:
+  using: "node20"
+  main: "main.js"
+inputs:
+  github-token:
+    description: "GitHub token to access the repository"
+    required: true
+  base:
+    description: "The base commit or branch to compare"
+    required: false
+  head-sha:
+    description: "The head commit sha to compare"
+    required: false
+branding:
+  icon: "umbrella"
+  color: "blue"

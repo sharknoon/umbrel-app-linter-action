@@ -1,33 +1,51 @@
-# umbrel-github-app
+# umbrel-app-liner-action
 
-> A GitHub App that checks your umbrelOS Apps for issues and provides fixes
+> A GitHub Action that checks your umbrelOS Apps for issues and provides fixes
 
-## Setup
+## Linting apps on Pull Requests
 
-```sh
-# Install dependencies
-npm install
+When using Pull Requests, this action automatically detects the changed files.
 
-# Run the bot
-npm start
+```yml
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Linting umbrelOS Apps
+        uses: sharknoon/umbrel-app-linter-action@1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-## Docker
+## Linting apps on every other event
 
-```sh
-# 1. Build container
-docker build -t umbrel-github-app .
+You need to specify the base branch or commit hash as well as the head commit hash (no branch name!)
+to compare those two git refs. This way the linter determines the changed files.
 
-# 2. Start container
-docker run -e APP_ID=<app-id> -e PRIVATE_KEY=<pem-value> umbrel-github-app
+```yml
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Linting umbrelOS Apps
+        uses: sharknoon/umbrel-app-linter-action@1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          base: "main"
+          head-sha: ${{ github.sha }}
 ```
-
-## Contributing
-
-If you have suggestions for how umbrel-github-app could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
-
-For more, check out the [Contributing Guide](CONTRIBUTING.md).
-
-## License
-
-[ISC](LICENSE) © 2024 Josua Frank
