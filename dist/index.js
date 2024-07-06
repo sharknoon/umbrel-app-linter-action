@@ -36839,7 +36839,7 @@ This is just for your information.
 
 ${lintedFiles
                 .map((file) => {
-                return `#### ${file.filename}
+                return `### \`${file.filename}\`
 | 🚨 Severity | 🪪 ID | 💬 Message |
 | --- | --- | --- |
 ${file.result
@@ -36847,7 +36847,7 @@ ${file.result
                     ? "❌ Error"
                     : r.severity === "warning"
                         ? "⚠️ Warning"
-                        : "ℹ️ Info"} | \`${escapeMarkdown(r.id)}\` | **${escapeMarkdown(r.title)}**: ${escapeMarkdown(r.message)} |`)
+                        : "ℹ️ Info"} | \`${r.id}\` | **${escapeMarkdown(r.title)}**: ${escapeMarkdown(r.message)} |`)
                     .join("\n")}`;
             })
                 .join("\n\n")}`,
