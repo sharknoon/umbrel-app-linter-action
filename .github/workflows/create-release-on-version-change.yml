@@ -1,6 +1,7 @@
 name: Create release on version change
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "main"
@@ -28,4 +29,4 @@ jobs:
           draft: true
           name: Umbrel App Linter v${{ steps.check.outputs.version }}
           tag_name: v${{ steps.check.outputs.version }}
-          body: '**Full Changelog**: https://github.com/sharknoon/umbrel-app-linter-action/compare/${{ steps.get_latest_tag.outputs.LATEST_TAG }}...v${{ steps.check.outputs.version }}'
+          body: "**Full Changelog**: https://github.com/sharknoon/umbrel-app-linter-action/compare/${{ steps.get_latest_tag.outputs.LATEST_TAG }}...v${{ steps.check.outputs.version }}"
