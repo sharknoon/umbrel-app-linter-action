@@ -124,6 +124,9 @@ try {
     }
   }
 
+  // Export the raw results, maybe someone has a use for them
+  setOutput("results", JSON.stringify(lintedFiles));
+
   const numberOfErrors = lintedFiles
     .flatMap((f) => f.result)
     .filter((r) => r.severity === "error").length;
@@ -133,6 +136,12 @@ try {
   const numberOfInfos = lintedFiles
     .flatMap((f) => f.result)
     .filter((r) => r.severity === "info").length;
+
+  // Export some variables, maybe someone has a use for them
+  setOutput("errors", numberOfErrors);
+  setOutput("warnings", numberOfWarnings);
+  setOutput("infos", numberOfInfos);
+
   let title = "";
   switch (true) {
     case numberOfErrors === 0 && numberOfWarnings === 0:
@@ -260,11 +269,11 @@ try {
     }
   }
 
-  // Export some variables, maybe someone has a use for them
-  setOutput("errors", numberOfErrors);
-  setOutput("warnings", numberOfWarnings);
-  setOutput("infos", numberOfInfos);
-  setOutput("results", JSON.stringify(lintedFiles));
+  // Finish the action
+  summary.write();
+  if (numberOfErrors > 0) {
+    setFailed(title);
+  }
 } catch (error) {
   setFailed(`Action failed with error ${error}`);
 }

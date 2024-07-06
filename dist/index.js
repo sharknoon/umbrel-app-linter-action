@@ -36753,6 +36753,8 @@ try {
             }
         }
     }
+    // Export the raw results, maybe someone has a use for them
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("results", JSON.stringify(lintedFiles));
     const numberOfErrors = lintedFiles
         .flatMap((f) => f.result)
         .filter((r) => r.severity === "error").length;
@@ -36762,6 +36764,10 @@ try {
     const numberOfInfos = lintedFiles
         .flatMap((f) => f.result)
         .filter((r) => r.severity === "info").length;
+    // Export some variables, maybe someone has a use for them
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("errors", numberOfErrors);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("warnings", numberOfWarnings);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("infos", numberOfInfos);
     let title = "";
     switch (true) {
         case numberOfErrors === 0 && numberOfWarnings === 0:
@@ -36872,11 +36878,11 @@ try {
                     : "ℹ️"} \`${result.id}\` **${result.title}**  \n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${result.message.replaceAll("\n", "\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")}`);
         }
     }
-    // Export some variables, maybe someone has a use for them
-    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("errors", numberOfErrors);
-    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("warnings", numberOfWarnings);
-    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("infos", numberOfInfos);
-    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("results", JSON.stringify(lintedFiles));
+    // Finish the action
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.write();
+    if (numberOfErrors > 0) {
+        (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed)(title);
+    }
 }
 catch (error) {
     (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed)(`Action failed with error ${error}`);

@@ -14,6 +14,15 @@ inputs:
   head-sha:
     description: "The head commit sha to compare"
     required: false
+outputs:
+  errors:
+    description: "The number of errors found"
+  warnings:
+    description: "The number of warnings found"
+  infos:
+    description: "The number of infos found"
+  results:
+    description: "The raw results of the linter"
 branding:
   icon: "umbrella"
   color: "blue"
