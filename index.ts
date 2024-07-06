@@ -24,7 +24,7 @@ const supportedFiles = [
 
 try {
   // Get inputs and set up the octokit client
-  const token = getInput("github-token", { required: true });
+  const token = getInput("github-token");
   const octokit = getOctokit(token);
   let base = getInput("base");
   let headSHA = getInput("head-sha");
@@ -57,20 +57,6 @@ try {
   }
 
   const files = response.data.files ?? [];
-
-  // Create a check run
-  /*const check = await octokit.rest.checks.create({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      name: "app-linter",
-      head_sha: headSHA,
-      status: "in_progress",
-      started_at: new Date().toISOString(),
-      output: {
-        title: "Umbrel App Linter",
-        summary: "Linting files...",
-      },
-    });*/
 
   // Iterate over the changed files and retrieve their content
   const lintedFiles: { filename: string; result: LintingResult[] }[] = [];
@@ -145,88 +131,27 @@ try {
   let title = "";
   switch (true) {
     case numberOfErrors === 0 && numberOfWarnings === 0:
-      title = "🎉 No errors found";
+      title = "🎉 Linting finished with no errors or warnings 🎉";
       break;
     case numberOfErrors > 0 && numberOfWarnings > 0:
-      title = `❌ ${numberOfErrors} errors and ${numberOfWarnings} warnings found`;
+      title = `❌ Linting failed with ${numberOfErrors} errors and ${numberOfWarnings} warnings ❌`;
       break;
     case numberOfErrors > 0:
-      title = `❌ ${numberOfErrors} errors found`;
+      title = `❌ Linting failed with ${numberOfErrors} errors ❌`;
       break;
     case numberOfWarnings > 0:
-      title = `⚠️ ${numberOfWarnings} warnings found`;
+      title = `⚠️ Linting finished with ${numberOfWarnings} warnings ⚠️`;
       break;
   }
-
-  // update the check run with the results
-  /*await octokit.rest.checks.update({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      check_run_id: check.data.id,
-      status: "completed",
-      conclusion: numberOfErrors > 0 ? "failure" : "success",
-      completed_at: new Date().toISOString(),
-      output: {
-        title,
-        summary: `### Legend\n\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`,
-        text: results
-          .map(
-            (r) =>
-              `### \`${r.filename}\`\n\n${r.result
-                .map(
-                  (e) =>
-                    `${
-                      e.severity === "error"
-                        ? "❌"
-                        : e.severity === "warning"
-                        ? "⚠️"
-                        : "ℹ️"
-                    } \`${e.id}\` **${
-                      e.title
-                    }**  \n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${e.message.replaceAll(
-                      "\n",
-                      "\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-                    )}`
-                )
-                .join("\n\n")}`
-          )
-          .join("\n\n"),
-        annotations: results.flatMap((f) =>
-          f.result
-            .filter((r) => r.line !== undefined)
-            .map((r) => ({
-              path: f.filename,
-              start_line: r.line?.start ?? 1,
-              end_line: r.line?.end ?? 1,
-              start_column: r.column?.start,
-              end_column: r.column?.end,
-              annotation_level:
-                r.severity === "error"
-                  ? "failure"
-                  : r.severity === "warning"
-                  ? "warning"
-                  : "notice",
-              message: r.message,
-              title: `[${r.id}] ${r.title}`,
-              raw_details: JSON.stringify(r, null, 2),
-            }))
-        ),
-      },
-      // TODO add some nifty actions to fix the errors
-    });*/
 
   // Create workflow annotations
   for (const file of lintedFiles) {
     for (const result of file.result) {
-      if (result.line === undefined) {
-        continue;
-      }
-
       const annotationProperties = {
         title: result.title,
         file: file.filename,
-        startLine: result.line.start,
-        endLine: result.line.end,
+        startLine: result.line?.start,
+        endLine: result.line?.end,
         startColumn: result.column?.start,
         endColumn: result.column?.end,
       };
@@ -246,27 +171,40 @@ try {
 
   // Create job summary
   summary.addHeading(title);
+  summary.addHeading("Legend", 2);
   summary.addRaw(
-    `### Legend\n\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`
+    `❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`
   );
   for (const file of lintedFiles) {
-    for (const result of file.result) {
-      summary.addDetails(
-        result.title,
-        `${
-          result.severity === "error"
-            ? "❌"
-            : result.severity === "warning"
-            ? "⚠️"
-            : "ℹ️"
-        } \`${result.id}\` **${
-          result.title
-        }**  \n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${result.message.replaceAll(
-          "\n",
-          "\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
-        )}`
-      );
-    }
+    summary.addHeading(file.filename, 2);
+    summary.addTable([
+      [
+        { data: "Severity 🚨", header: true },
+        { data: "ID 🪪", header: true },
+        { data: "Title ℹ️", header: true },
+        { data: "Message 💬", header: true },
+      ],
+      ...file.result.map((r) => [
+        r.severity === "error"
+          ? "❌ Error"
+          : r.severity === "warning"
+          ? "⚠️ Warning"
+          : "ℹ️ Info",
+        "<pre><code>" + r.id + "</code></pre>",
+        r.title,
+        r.message,
+      ]),
+    ]);
+  }
+
+  // Create a comment on the PR
+  if (context.payload.pull_request) {
+    await octokit.rest.issues.createComment({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: context.payload.pull_request.number,
+      body: `## ${title}\n\nTODO`,
+    });
   }
 
   // Finish the action
