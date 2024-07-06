@@ -21,11 +21,10 @@ jobs:
         id: get_latest_tag
         run: |
           git fetch --tags
-          echo "::set-output name=LATEST_TAG::$(git describe --tags $(git rev-list --tags --max-count=1))"
+          echo "LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT
       - if: steps.check.outputs.changed == 'false'
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
           name: Umbrel App Linter v${{ steps.check.outputs.version }}
           tag_name: v${{ steps.check.outputs.version }}
           body: "**Full Changelog**: https://github.com/sharknoon/umbrel-app-linter-action/compare/${{ steps.get_latest_tag.outputs.LATEST_TAG }}...v${{ steps.check.outputs.version }}"
