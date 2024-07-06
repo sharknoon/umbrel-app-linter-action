@@ -1,5 +1,14 @@
-import core from "@actions/core";
-import github from "@actions/github";
+import {
+  getInput,
+  debug,
+  error,
+  warning,
+  notice,
+  summary,
+  setOutput,
+  setFailed,
+} from "@actions/core";
+import { context, getOctokit } from "@actions/github";
 import {
   lintUmbrelAppYml,
   LintingResult,
@@ -15,19 +24,18 @@ const supportedFiles = [
 
 try {
   // Get inputs and set up the octokit client
-  const token = core.getInput("github-token", { required: true });
-  const octokit = github.getOctokit(token);
-  const context = github.context;
-  let base = core.getInput("base");
-  let headSHA = core.getInput("head-sha");
+  const token = getInput("github-token", { required: true });
+  const octokit = getOctokit(token);
+  let base = getInput("base");
+  let headSHA = getInput("head-sha");
 
   // Check if the event is a pull request
   if (context.payload.pull_request) {
-    core.debug("Event is a pull request");
+    debug("Event is a pull request");
     base = base || context.payload.pull_request.base.sha;
     headSHA = headSHA || context.payload.pull_request.head.sha;
   } else {
-    core.debug("Event is not a pull request");
+    debug("Event is not a pull request");
   }
 
   // If the base or head SHA is not set, cancel the action
@@ -215,26 +223,26 @@ try {
       };
       switch (result.severity) {
         case "error":
-          core.error(result.message, annotationProperties);
+          error(result.message, annotationProperties);
           break;
         case "warning":
-          core.warning(result.message, annotationProperties);
+          warning(result.message, annotationProperties);
           break;
         case "info":
-          core.notice(result.message, annotationProperties);
+          notice(result.message, annotationProperties);
           break;
       }
     }
   }
 
   // Create job summary
-  core.summary.addHeading(title);
-  core.summary.addRaw(
+  summary.addHeading(title);
+  summary.addRaw(
     `### Legend\n\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`
   );
   for (const file of lintedFiles) {
     for (const result of file.result) {
-      core.summary.addDetails(
+      summary.addDetails(
         result.title,
         `${
           result.severity === "error"
@@ -253,10 +261,10 @@ try {
   }
 
   // Export some variables, maybe someone has a use for them
-  core.setOutput("errors", numberOfErrors);
-  core.setOutput("warnings", numberOfWarnings);
-  core.setOutput("infos", numberOfInfos);
-  core.setOutput("results", JSON.stringify(lintedFiles));
+  setOutput("errors", numberOfErrors);
+  setOutput("warnings", numberOfWarnings);
+  setOutput("infos", numberOfInfos);
+  setOutput("results", JSON.stringify(lintedFiles));
 } catch (error) {
-  core.setFailed(`Action failed with error ${error}`);
+  setFailed(`Action failed with error ${error}`);
 }

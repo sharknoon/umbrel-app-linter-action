@@ -36668,19 +36668,18 @@ const supportedFiles = [
 ];
 try {
     // Get inputs and set up the octokit client
-    const token = _actions_core__WEBPACK_IMPORTED_MODULE_0___default().getInput("github-token", { required: true });
-    const octokit = _actions_github__WEBPACK_IMPORTED_MODULE_1___default().getOctokit(token);
-    const context = (_actions_github__WEBPACK_IMPORTED_MODULE_1___default().context);
-    let base = _actions_core__WEBPACK_IMPORTED_MODULE_0___default().getInput("base");
-    let headSHA = _actions_core__WEBPACK_IMPORTED_MODULE_0___default().getInput("head-sha");
+    const token = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("github-token", { required: true });
+    const octokit = (0,_actions_github__WEBPACK_IMPORTED_MODULE_1__.getOctokit)(token);
+    let base = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("base");
+    let headSHA = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("head-sha");
     // Check if the event is a pull request
-    if (context.payload.pull_request) {
-        _actions_core__WEBPACK_IMPORTED_MODULE_0___default().debug("Event is a pull request");
-        base = base || context.payload.pull_request.base.sha;
-        headSHA = headSHA || context.payload.pull_request.head.sha;
+    if (_actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request) {
+        (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.debug)("Event is a pull request");
+        base = base || _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request.base.sha;
+        headSHA = headSHA || _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request.head.sha;
     }
     else {
-        _actions_core__WEBPACK_IMPORTED_MODULE_0___default().debug("Event is not a pull request");
+        (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.debug)("Event is not a pull request");
     }
     // If the base or head SHA is not set, cancel the action
     if (!base || !headSHA) {
@@ -36688,8 +36687,8 @@ try {
     }
     // Compare commits to get the list of changed files
     const response = await octokit.rest.repos.compareCommitsWithBasehead({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
+        owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
+        repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
         basehead: `${base}...${headSHA}`,
     });
     if (response.status !== 200) {
@@ -36720,8 +36719,8 @@ try {
         }
         // Get the content of the changed file
         const fileContent = await octokit.rest.repos.getContent({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
+            owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
+            repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
             path: file.filename,
             ref: headSHA,
         });
@@ -36850,23 +36849,23 @@ try {
             };
             switch (result.severity) {
                 case "error":
-                    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().error(result.message, annotationProperties);
+                    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.error)(result.message, annotationProperties);
                     break;
                 case "warning":
-                    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().warning(result.message, annotationProperties);
+                    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.warning)(result.message, annotationProperties);
                     break;
                 case "info":
-                    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().notice(result.message, annotationProperties);
+                    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.notice)(result.message, annotationProperties);
                     break;
             }
         }
     }
     // Create job summary
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().summary.addHeading(title);
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().summary.addRaw(`### Legend\n\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`);
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addHeading(title);
+    _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addRaw(`### Legend\n\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`);
     for (const file of lintedFiles) {
         for (const result of file.result) {
-            _actions_core__WEBPACK_IMPORTED_MODULE_0___default().summary.addDetails(result.title, `${result.severity === "error"
+            _actions_core__WEBPACK_IMPORTED_MODULE_0__.summary.addDetails(result.title, `${result.severity === "error"
                 ? "❌"
                 : result.severity === "warning"
                     ? "⚠️"
@@ -36874,13 +36873,13 @@ try {
         }
     }
     // Export some variables, maybe someone has a use for them
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().setOutput("errors", numberOfErrors);
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().setOutput("warnings", numberOfWarnings);
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().setOutput("infos", numberOfInfos);
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().setOutput("results", JSON.stringify(lintedFiles));
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("errors", numberOfErrors);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("warnings", numberOfWarnings);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("infos", numberOfInfos);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("results", JSON.stringify(lintedFiles));
 }
 catch (error) {
-    _actions_core__WEBPACK_IMPORTED_MODULE_0___default().setFailed(`Action failed with error ${error}`);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed)(`Action failed with error ${error}`);
 }
 
 __webpack_async_result__();
