@@ -52,3 +52,22 @@ jobs:
           base: "main"
           head-sha: ${{ github.sha }}
 ```
+
+## Development
+
+Install dependencies with
+
+```bash
+npm i
+```
+
+Create production build with
+
+```bash
+npm run build
+```
+
+To publish a new version
+
+1. Push your changes to GitHub using `git commit -m "new version"` and `git push`
+2. Create a new Release [here](https://github.com/sharknoon/umbrel-app-linter-action/releases/new)
