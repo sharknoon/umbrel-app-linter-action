@@ -14,6 +14,7 @@ import {
   LintingResult,
   lintDockerComposeYml,
   lintUmbrelAppStoreYml,
+  lintDirectoryStructure,
 } from "umbrel-cli/dist/lib.js";
 
 const supportedFiles = [
@@ -56,11 +57,29 @@ try {
     throw new Error(`Failed to compare commits: ${response.status}`);
   }
 
-  const files = response.data.files ?? [];
+  const changedFiles = response.data.files ?? [];
+
+  const fileTree = await octokit.rest.git.getTree({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    tree_sha: headSHA,
+    recursive: "true",
+  });
+  const allFiles =
+    fileTree.status !== 200
+      ? []
+      : fileTree.data.tree
+          .map((f) => ({
+            path: f.path as string,
+            type: (f.type === "blob" ? "file" : "directory") as
+              | "file"
+              | "directory",
+          }))
+          .filter((f) => f.path);
 
   // Iterate over the changed files and retrieve their content
   const lintedFiles: { filename: string; result: LintingResult[] }[] = [];
-  for (const file of files) {
+  for (const file of changedFiles) {
     if (!supportedFiles.some((f) => file.filename.includes(f))) {
       continue;
     }
@@ -87,7 +106,8 @@ try {
     // Lint the files
     switch (true) {
       case file.filename.endsWith("umbrel-app.yml"): {
-        const result = await lintUmbrelAppYml(content, {
+        const appId = file.filename.split("/").slice(-2, -1)[0];
+        const result = await lintUmbrelAppYml(content, appId, {
           isNewAppSubmission: file.status === "added",
           pullRequestUrl: context.payload.pull_request?.url,
         });
@@ -97,7 +117,8 @@ try {
         break;
       }
       case file.filename.endsWith("docker-compose.yml"): {
-        const result = await lintDockerComposeYml(content);
+        const appId = file.filename.split("/").slice(-2, -1)[0];
+        const result = await lintDockerComposeYml(content, appId, allFiles);
         if (result.length > 0) {
           lintedFiles.push({ filename: file.filename, result });
         }
@@ -110,6 +131,18 @@ try {
         }
         break;
       }
+    }
+  }
+
+  // Iterate over all changed apps
+  const appIds = changedFiles
+    .map((f) => f.filename.split("/")[0])
+    .filter((value, index, array) => array.indexOf(value) === index);
+  for (const appId of appIds) {
+    const appFiles = allFiles.filter((f) => f.path.startsWith(`${appId}/`));
+    const results = lintDirectoryStructure(appFiles);
+    for (const result of results) {
+      lintedFiles.push({ filename: result.file, result: [result] });
     }
   }
 
