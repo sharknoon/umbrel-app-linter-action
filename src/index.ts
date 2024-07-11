@@ -87,7 +87,10 @@ try {
     // Lint the files
     switch (true) {
       case file.filename.endsWith("umbrel-app.yml"): {
-        const result = await lintUmbrelAppYml(content);
+        const result = await lintUmbrelAppYml(content, {
+          isNewAppSubmission: file.status === "added",
+          pullRequestUrl: context.payload.pull_request?.url,
+        });
         if (result.length > 0) {
           lintedFiles.push({ filename: file.filename, result });
         }
