@@ -36735,7 +36735,7 @@ try {
                 const appId = file.filename.split("/").slice(-2, -1)[0];
                 const result = await (0,umbrel_cli_dist_lib_js__WEBPACK_IMPORTED_MODULE_2__/* .lintUmbrelAppYml */ .Bm)(content, appId, {
                     isNewAppSubmission: file.status === "added",
-                    pullRequestUrl: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request?.url,
+                    pullRequestUrl: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request?.html_url,
                 });
                 if (result.length > 0) {
                     lintedFiles.push({ filename: file.filename, result });

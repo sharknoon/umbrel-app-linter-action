@@ -109,7 +109,7 @@ try {
         const appId = file.filename.split("/").slice(-2, -1)[0];
         const result = await lintUmbrelAppYml(content, appId, {
           isNewAppSubmission: file.status === "added",
-          pullRequestUrl: context.payload.pull_request?.url,
+          pullRequestUrl: context.payload.pull_request?.html_url,
         });
         if (result.length > 0) {
           lintedFiles.push({ filename: file.filename, result });
