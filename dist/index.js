@@ -36894,7 +36894,6 @@ catch (error) {
 }
 function escapeMarkdown(text) {
     return text
-        .replaceAll("\n", "<br>")
         .replaceAll("\\", "\\\\")
         .replaceAll("`", "\\`")
         .replaceAll("*", "\\*")
@@ -36912,7 +36911,8 @@ function escapeMarkdown(text) {
         .replaceAll("-", "\\-")
         .replaceAll(".", "\\.")
         .replaceAll("!", "\\!")
-        .replaceAll("|", "\\|");
+        .replaceAll("|", "\\|")
+        .replaceAll("\n", "<br>");
 }
 
 __webpack_async_result__();
