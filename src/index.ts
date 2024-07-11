@@ -212,7 +212,7 @@ try {
     `\n❌ **Error**  \nThis must be resolved before this PR can be merged.\n\n\n⚠️ **Warning**  \nThis is highly encouraged to be resolved, but is not strictly mandatory.\n\n\nℹ️ **Info**  \nThis is just for your information.`
   );
   for (const file of lintedFiles) {
-    summary.addHeading(file.filename, 2);
+    summary.addHeading("<pre><code>" + file.filename + "</code></pre>", 2);
     summary.addTable([
       [
         { data: "🚨 Severity", header: true },
