@@ -250,6 +250,7 @@ ${file.result
 
 function escapeMarkdown(text: string): string {
   return text
+    .replaceAll("\n", "<br>")
     .replaceAll("\\", "\\\\")
     .replaceAll("`", "\\`")
     .replaceAll("*", "\\*")
