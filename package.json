@@ -15,7 +15,7 @@
     "umbrel-apps"
   ],
   "scripts": {
-    "build": "ncc build index.ts --license licenses.txt"
+    "build": "ncc build src/index.ts --license licenses.txt"
   },
   "dependencies": {
     "@actions/core": "^1.10.1",

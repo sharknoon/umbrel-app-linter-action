@@ -36649,7 +36649,7 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 4177:
+/***/ 6144:
 /***/ ((module, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
 
 __nccwpck_require__.a(module, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
@@ -36864,6 +36864,7 @@ catch (error) {
 }
 function escapeMarkdown(text) {
     return text
+        .replaceAll("\n", "<br>")
         .replaceAll("\\", "\\\\")
         .replaceAll("`", "\\`")
         .replaceAll("*", "\\*")
@@ -51514,6 +51515,6 @@ module.exports = JSON.parse('{"$schema":"http://json-schema.org/draft-07/schema#
 /******/ // startup
 /******/ // Load entry module and return exports
 /******/ // This entry module used 'module' so it can't be inlined
-/******/ var __webpack_exports__ = __nccwpck_require__(4177);
+/******/ var __webpack_exports__ = __nccwpck_require__(6144);
 /******/ __webpack_exports__ = await __webpack_exports__;
 /******/ 
