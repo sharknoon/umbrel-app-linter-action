@@ -118,7 +118,7 @@ try {
       }
       case file.filename.endsWith("docker-compose.yml"): {
         const appId = file.filename.split("/").slice(-2, -1)[0];
-        const result = await lintDockerComposeYml(content, appId, allFiles);
+        const result = await lintDockerComposeYml(content, appId, allFiles, { checkImageArchitectures: true });
         if (result.length > 0) {
           lintedFiles.push({ filename: file.filename, result });
         }

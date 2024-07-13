@@ -1,6 +1,6 @@
 {
   "name": "umbrel-github-action",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "private": true,
   "description": "Checks your umbrelOS Apps for issues and provides fixes",
   "author": "Josua Frank",
@@ -15,12 +15,13 @@
     "umbrel-apps"
   ],
   "scripts": {
-    "build": "ncc build src/index.ts --license licenses.txt"
+    "build": "ncc build src/index.ts --license licenses.txt",
+    "prepare": "npm run build"
   },
   "dependencies": {
     "@actions/core": "^1.10.1",
     "@actions/github": "^6.0.0",
-    "umbrel-cli": "^0.4.5"
+    "umbrel-cli": "^0.4.7"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
