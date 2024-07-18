@@ -170,13 +170,13 @@ try {
       title = "🎉 Linting finished with no errors or warnings 🎉";
       break;
     case numberOfErrors > 0 && numberOfWarnings > 0:
-      title = `❌ Linting failed with ${numberOfErrors} errors and ${numberOfWarnings} warnings ❌`;
+      title = `❌ Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? 's' : ''} and ${numberOfWarnings} warning${numberOfWarnings > 1 ? 's' : ''} ❌`;
       break;
     case numberOfErrors > 0:
-      title = `❌ Linting failed with ${numberOfErrors} errors ❌`;
+      title = `❌ Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? 's' : ''} ❌`;
       break;
     case numberOfWarnings > 0:
-      title = `⚠️ Linting finished with ${numberOfWarnings} warnings ⚠️`;
+      title = `⚠️ Linting finished with ${numberOfWarnings} warning${numberOfWarnings > 1 ? 's' : ''} ⚠️`;
       break;
   }
 
