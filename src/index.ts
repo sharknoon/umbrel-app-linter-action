@@ -201,11 +201,11 @@ try {
   // Create job summary
   summary.addHeading(title);
   summary.addRaw(
-    "Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store."
+    "<br>Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store."
   );
   if (numberOfErrors > 0 || numberOfWarnings > 0 || numberOfInfos > 0) {
     summary.addRaw(
-      "Please review the linting results below and make any necessary changes to your submission."
+      "<br>Please review the linting results below and make any necessary changes to your submission."
     );
     summary.addHeading("Linting Results", 2);
     summary.addTable([
@@ -243,37 +243,37 @@ try {
     if (numberOfErrors > 0 || numberOfWarnings > 0 || numberOfInfos > 0) {
       issues = `Please review the linting results below and make any necessary changes to your submission.
         
-      ### Linting Results
-      | Severity | File | Description |
-      | --- | --- | --- |
-      ${result
-        .map((r) => {
-          let severity = "";
-          switch (r.severity) {
-            case "error":
-              severity = "❌";
-              break;
-            case "warning":
-              severity = "⚠️";
-              break;
-            case "info":
-              severity = "ℹ️";
-              break;
-          }
-          return `| ${severity} | \`${r.file}\` | **${escapeMarkdown(r.title)}:**\n${escapeMarkdown(
-            r.message
-          )} |`;
-        })
-        .join("\n")}
-        
-      ### Legend
-      
-      | Symbol | Description |
-      |--------|-------------|
-      | ❌ | **Error:** This must be resolved before this PR can be merged. |
-      | ⚠️ | **Warning:** This is highly encouraged to be resolved, but is not strictly mandatory. |
-      | ℹ️ | **Info:** This is just for your information. |      
-      `;
+### Linting Results
+| Severity | File | Description |
+| --- | --- | --- |
+${result
+  .map((r) => {
+    let severity = "";
+    switch (r.severity) {
+      case "error":
+        severity = "❌";
+        break;
+      case "warning":
+        severity = "⚠️";
+        break;
+      case "info":
+        severity = "ℹ️";
+        break;
+    }
+    return `| ${severity} | \`${r.file}\` | **${escapeMarkdown(r.title)}:**<br>${escapeMarkdown(
+      r.message
+    )} |`;
+  })
+  .join("\n")}
+  
+### Legend
+
+| Symbol | Description |
+|--------|-------------|
+| ❌ | **Error:** This must be resolved before this PR can be merged. |
+| ⚠️ | **Warning:** This is highly encouraged to be resolved, but is not strictly mandatory. |
+| ℹ️ | **Info:** This is just for your information. |      
+`;
     }
     await octokit.rest.issues.createComment({
       owner: context.repo.owner,
@@ -281,8 +281,8 @@ try {
       issue_number: context.payload.pull_request.number,
       body: `## ${title}
 
-      Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store.
-      ${issues}`,
+Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store.
+${issues}`,
     });
   }
 
