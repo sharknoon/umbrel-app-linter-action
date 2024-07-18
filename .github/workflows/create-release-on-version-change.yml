@@ -25,6 +25,6 @@ jobs:
       - if: steps.check.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          name: Umbrel App Linter v${{ steps.check.outputs.version }}
+          name: Umbrel App Linter Fork Test v${{ steps.check.outputs.version }}
           tag_name: v${{ steps.check.outputs.version }}
-          body: "**Full Changelog**: https://github.com/sharknoon/umbrel-app-linter-action/compare/${{ steps.get_latest_tag.outputs.LATEST_TAG }}...v${{ steps.check.outputs.version }}"
+          body: "**Full Changelog**: https://github.com/nmfretz/umbrel-app-linter-action/compare/${{ steps.get_latest_tag.outputs.LATEST_TAG }}...v${{ steps.check.outputs.version }}"
