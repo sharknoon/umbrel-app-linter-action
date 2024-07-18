@@ -36791,13 +36791,13 @@ try {
             title = "🎉 Linting finished with no errors or warnings 🎉";
             break;
         case numberOfErrors > 0 && numberOfWarnings > 0:
-            title = `❌ Linting failed with ${numberOfErrors} errors and ${numberOfWarnings} warnings ❌`;
+            title = `❌ Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? 's' : ''} and ${numberOfWarnings} warning${numberOfWarnings > 1 ? 's' : ''} ❌`;
             break;
         case numberOfErrors > 0:
-            title = `❌ Linting failed with ${numberOfErrors} errors ❌`;
+            title = `❌ Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? 's' : ''} ❌`;
             break;
         case numberOfWarnings > 0:
-            title = `⚠️ Linting finished with ${numberOfWarnings} warnings ⚠️`;
+            title = `⚠️ Linting finished with ${numberOfWarnings} warning${numberOfWarnings > 1 ? 's' : ''} ⚠️`;
             break;
     }
     // Create workflow annotations
@@ -36854,18 +36854,8 @@ try {
             repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
             issue_number: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request.number,
             body: `## ${title}
-### Legend
-
-❌ **Error**  
-This must be resolved before this PR can be merged.
-
-
-⚠️ **Warning**  
-This is highly encouraged to be resolved, but is not strictly mandatory.
-
-
-ℹ️ **Info**  
-This is just for your information.
+Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store.
+Please review any comments below and make any necessary changes to your submission. 
 
 ${lintedFiles
                 .map((file) => {
@@ -36880,7 +36870,19 @@ ${file.result
                         : "ℹ️ Info"} | \`${r.id}\` | **${escapeMarkdown(r.title)}**: ${escapeMarkdown(r.message)} |`)
                     .join("\n")}`;
             })
-                .join("\n\n")}`,
+                .join("\n\n")}
+### Legend
+
+❌ **Error**  
+This must be resolved before this PR can be merged.
+
+
+⚠️ **Warning**  
+This is highly encouraged to be resolved, but is not strictly mandatory.
+
+
+ℹ️ **Info**  
+This is just for your information.`,
         });
     }
     // Finish the action
