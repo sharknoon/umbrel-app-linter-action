@@ -238,18 +238,8 @@ try {
       repo: context.repo.repo,
       issue_number: context.payload.pull_request.number,
       body: `## ${title}
-### Legend
-
-❌ **Error**  
-This must be resolved before this PR can be merged.
-
-
-⚠️ **Warning**  
-This is highly encouraged to be resolved, but is not strictly mandatory.
-
-
-ℹ️ **Info**  
-This is just for your information.
+Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store.
+Please review any comments below and make any necessary changes to your submission. 
 
 ${lintedFiles
   .map((file) => {
@@ -271,7 +261,19 @@ ${file.result
   )
   .join("\n")}`;
   })
-  .join("\n\n")}`,
+  .join("\n\n")}
+### Legend
+
+❌ **Error**  
+This must be resolved before this PR can be merged.
+
+
+⚠️ **Warning**  
+This is highly encouraged to be resolved, but is not strictly mandatory.
+
+
+ℹ️ **Info**  
+This is just for your information.`,
     });
   }
 
