@@ -21,7 +21,7 @@ jobs:
     name: Lint apps
     runs-on: ubuntu-latest
     steps:
-      - uses: sharknoon/umbrel-app-linter-action@v1.0.0
+      - uses: sharknoon/umbrel-app-linter-action@v1
 ```
 
 ## Linting apps on every other event
@@ -46,7 +46,7 @@ jobs:
     name: Lint apps
     runs-on: ubuntu-latest
     steps:
-      - uses: sharknoon/umbrel-app-linter-action@v1.0.0
+      - uses: sharknoon/umbrel-app-linter-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           base: "main"
