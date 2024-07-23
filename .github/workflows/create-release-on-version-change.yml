@@ -35,7 +35,7 @@ jobs:
       - if: steps.check.outputs.changed == 'true'
         id: get_major_tag
         run: |
-          echo "MAJOR_TAG=$(v${{ steps.check.outputs.version }} | cut -d '.' -f 1)" >> $GITHUB_OUTPUT
+          echo "MAJOR_TAG=$(echo "v${{ steps.check.outputs.version }}" | cut -d '.' -f 1)" >> $GITHUB_OUTPUT
       - if: steps.check.outputs.changed == 'true'
         run: git tag -f ${{ steps.get_major_tag.outputs.MAJOR_TAG }} v${{ steps.check.outputs.version }}
       - if: steps.check.outputs.changed == 'true'
