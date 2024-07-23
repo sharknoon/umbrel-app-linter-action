@@ -34,9 +34,9 @@ jobs:
       #          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
       - if: steps.check.outputs.changed == 'true'
         id: get_major_tag
+        run: echo "MAJOR_TAG=$(echo "v${{ steps.check.outputs.version }}" | cut -d '.' -f 1)" >> $GITHUB_OUTPUT
+      - if: steps.check.outputs.changed == 'true'
         run: |
-          echo "MAJOR_TAG=$(echo "v${{ steps.check.outputs.version }}" | cut -d '.' -f 1)" >> $GITHUB_OUTPUT
-      - if: steps.check.outputs.changed == 'true'
-        run: git tag -f ${{ steps.get_major_tag.outputs.MAJOR_TAG }} v${{ steps.check.outputs.version }}
-      - if: steps.check.outputs.changed == 'true'
-        run: git push origin ${{ steps.get_major_tag.outputs.MAJOR_TAG }} --force
+          git fetch --tags
+          git tag -f ${{ steps.get_major_tag.outputs.MAJOR_TAG }} v${{ steps.check.outputs.version }}
+          git push origin ${{ steps.get_major_tag.outputs.MAJOR_TAG }} --force
