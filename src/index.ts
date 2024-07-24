@@ -205,7 +205,7 @@ try {
   );
   if (numberOfErrors > 0 || numberOfWarnings > 0 || numberOfInfos > 0) {
     summary.addRaw(
-      "<br>Please review the linting results below and make any necessary changes to your submission."
+      "<br><br>Please review the linting results below and make any necessary changes to your submission."
     );
     summary.addHeading("Linting Results", 2);
     summary.addTable([
@@ -282,6 +282,7 @@ ${result
       body: `## ${title}
 
 Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store.
+
 ${issues}`,
     });
   }
