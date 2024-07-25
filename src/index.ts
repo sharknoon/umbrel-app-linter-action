@@ -159,19 +159,22 @@ try {
   setOutput("warnings", numberOfWarnings);
   setOutput("infos", numberOfInfos);
 
+  // Helper function to create a string of spaces, which are not trimmed by GitHub
+  const nbsp = (count: number) => '&nbsp;'.repeat(count);
+
   let title = "";
   switch (true) {
     case numberOfErrors === 0 && numberOfWarnings === 0:
-      title = "🎉   Linting finished with no errors or warnings   🎉";
+      title = `🎉${nbsp(3)}Linting finished with no errors or warnings${nbsp(3)}🎉`;
       break;
     case numberOfErrors > 0 && numberOfWarnings > 0:
-      title = `❌   Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? "s" : ""} and ${numberOfWarnings} warning${numberOfWarnings > 1 ? "s" : ""}   ❌`;
+      title = `❌${nbsp(3)}Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? "s" : ""} and ${numberOfWarnings} warning${numberOfWarnings > 1 ? "s" : ""}${nbsp(3)}❌`;
       break;
     case numberOfErrors > 0:
-      title = `❌   Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? "s" : ""}   ❌`;
+      title = `❌${nbsp(3)}Linting failed with ${numberOfErrors} error${numberOfErrors > 1 ? "s" : ""}${nbsp(3)}❌`;
       break;
     case numberOfWarnings > 0:
-      title = `⚠️   Linting finished with ${numberOfWarnings} warning${numberOfWarnings > 1 ? "s" : ""}   ⚠️`;
+      title = `⚠️${nbsp(3)}Linting finished with ${numberOfWarnings} warning${numberOfWarnings > 1 ? "s" : ""}${nbsp(3)}⚠️`;
       break;
   }
 
@@ -205,7 +208,7 @@ try {
   );
   if (numberOfErrors > 0 || numberOfWarnings > 0 || numberOfInfos > 0) {
     summary.addRaw(
-      "<br>Please review the linting results below and make any necessary changes to your submission."
+      "<br><br>Please review the linting results below and make any necessary changes to your submission."
     );
     summary.addHeading("Linting Results", 2);
     summary.addTable([
@@ -282,6 +285,7 @@ ${result
       body: `## ${title}
 
 Thank you for your submission! This is an automated linter that checks for common issues in pull requests to the Umbrel App Store.
+
 ${issues}`,
     });
   }
