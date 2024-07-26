@@ -6150,6 +6150,7 @@ Object.defineProperty(exports, "MissingRefError", ({ enumerable: true, get: func
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class
 class _CodeOrName {
 }
 exports._CodeOrName = _CodeOrName;
@@ -9709,7 +9710,7 @@ ucs2length.code = 'require("ajv/dist/runtime/ucs2length").default';
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const uri = __nccwpck_require__(20);
+const uri = __nccwpck_require__(9688);
 uri.code = 'require("ajv/dist/runtime/uri").default';
 exports["default"] = uri;
 //# sourceMappingURL=uri.js.map
@@ -34529,1455 +34530,6 @@ exports.getUserAgent = getUserAgent;
 
 /***/ }),
 
-/***/ 20:
-/***/ (function(__unused_webpack_module, exports) {
-
-/** @license URI.js v4.4.1 (c) 2011 Gary Court. License: http://github.com/garycourt/uri-js */
-(function (global, factory) {
-	 true ? factory(exports) :
-	0;
-}(this, (function (exports) { 'use strict';
-
-function merge() {
-    for (var _len = arguments.length, sets = Array(_len), _key = 0; _key < _len; _key++) {
-        sets[_key] = arguments[_key];
-    }
-
-    if (sets.length > 1) {
-        sets[0] = sets[0].slice(0, -1);
-        var xl = sets.length - 1;
-        for (var x = 1; x < xl; ++x) {
-            sets[x] = sets[x].slice(1, -1);
-        }
-        sets[xl] = sets[xl].slice(1);
-        return sets.join('');
-    } else {
-        return sets[0];
-    }
-}
-function subexp(str) {
-    return "(?:" + str + ")";
-}
-function typeOf(o) {
-    return o === undefined ? "undefined" : o === null ? "null" : Object.prototype.toString.call(o).split(" ").pop().split("]").shift().toLowerCase();
-}
-function toUpperCase(str) {
-    return str.toUpperCase();
-}
-function toArray(obj) {
-    return obj !== undefined && obj !== null ? obj instanceof Array ? obj : typeof obj.length !== "number" || obj.split || obj.setInterval || obj.call ? [obj] : Array.prototype.slice.call(obj) : [];
-}
-function assign(target, source) {
-    var obj = target;
-    if (source) {
-        for (var key in source) {
-            obj[key] = source[key];
-        }
-    }
-    return obj;
-}
-
-function buildExps(isIRI) {
-    var ALPHA$$ = "[A-Za-z]",
-        CR$ = "[\\x0D]",
-        DIGIT$$ = "[0-9]",
-        DQUOTE$$ = "[\\x22]",
-        HEXDIG$$ = merge(DIGIT$$, "[A-Fa-f]"),
-        //case-insensitive
-    LF$$ = "[\\x0A]",
-        SP$$ = "[\\x20]",
-        PCT_ENCODED$ = subexp(subexp("%[EFef]" + HEXDIG$$ + "%" + HEXDIG$$ + HEXDIG$$ + "%" + HEXDIG$$ + HEXDIG$$) + "|" + subexp("%[89A-Fa-f]" + HEXDIG$$ + "%" + HEXDIG$$ + HEXDIG$$) + "|" + subexp("%" + HEXDIG$$ + HEXDIG$$)),
-        //expanded
-    GEN_DELIMS$$ = "[\\:\\/\\?\\#\\[\\]\\@]",
-        SUB_DELIMS$$ = "[\\!\\$\\&\\'\\(\\)\\*\\+\\,\\;\\=]",
-        RESERVED$$ = merge(GEN_DELIMS$$, SUB_DELIMS$$),
-        UCSCHAR$$ = isIRI ? "[\\xA0-\\u200D\\u2010-\\u2029\\u202F-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFEF]" : "[]",
-        //subset, excludes bidi control characters
-    IPRIVATE$$ = isIRI ? "[\\uE000-\\uF8FF]" : "[]",
-        //subset
-    UNRESERVED$$ = merge(ALPHA$$, DIGIT$$, "[\\-\\.\\_\\~]", UCSCHAR$$),
-        SCHEME$ = subexp(ALPHA$$ + merge(ALPHA$$, DIGIT$$, "[\\+\\-\\.]") + "*"),
-        USERINFO$ = subexp(subexp(PCT_ENCODED$ + "|" + merge(UNRESERVED$$, SUB_DELIMS$$, "[\\:]")) + "*"),
-        DEC_OCTET$ = subexp(subexp("25[0-5]") + "|" + subexp("2[0-4]" + DIGIT$$) + "|" + subexp("1" + DIGIT$$ + DIGIT$$) + "|" + subexp("[1-9]" + DIGIT$$) + "|" + DIGIT$$),
-        DEC_OCTET_RELAXED$ = subexp(subexp("25[0-5]") + "|" + subexp("2[0-4]" + DIGIT$$) + "|" + subexp("1" + DIGIT$$ + DIGIT$$) + "|" + subexp("0?[1-9]" + DIGIT$$) + "|0?0?" + DIGIT$$),
-        //relaxed parsing rules
-    IPV4ADDRESS$ = subexp(DEC_OCTET_RELAXED$ + "\\." + DEC_OCTET_RELAXED$ + "\\." + DEC_OCTET_RELAXED$ + "\\." + DEC_OCTET_RELAXED$),
-        H16$ = subexp(HEXDIG$$ + "{1,4}"),
-        LS32$ = subexp(subexp(H16$ + "\\:" + H16$) + "|" + IPV4ADDRESS$),
-        IPV6ADDRESS1$ = subexp(subexp(H16$ + "\\:") + "{6}" + LS32$),
-        //                           6( h16 ":" ) ls32
-    IPV6ADDRESS2$ = subexp("\\:\\:" + subexp(H16$ + "\\:") + "{5}" + LS32$),
-        //                      "::" 5( h16 ":" ) ls32
-    IPV6ADDRESS3$ = subexp(subexp(H16$) + "?\\:\\:" + subexp(H16$ + "\\:") + "{4}" + LS32$),
-        //[               h16 ] "::" 4( h16 ":" ) ls32
-    IPV6ADDRESS4$ = subexp(subexp(subexp(H16$ + "\\:") + "{0,1}" + H16$) + "?\\:\\:" + subexp(H16$ + "\\:") + "{3}" + LS32$),
-        //[ *1( h16 ":" ) h16 ] "::" 3( h16 ":" ) ls32
-    IPV6ADDRESS5$ = subexp(subexp(subexp(H16$ + "\\:") + "{0,2}" + H16$) + "?\\:\\:" + subexp(H16$ + "\\:") + "{2}" + LS32$),
-        //[ *2( h16 ":" ) h16 ] "::" 2( h16 ":" ) ls32
-    IPV6ADDRESS6$ = subexp(subexp(subexp(H16$ + "\\:") + "{0,3}" + H16$) + "?\\:\\:" + H16$ + "\\:" + LS32$),
-        //[ *3( h16 ":" ) h16 ] "::"    h16 ":"   ls32
-    IPV6ADDRESS7$ = subexp(subexp(subexp(H16$ + "\\:") + "{0,4}" + H16$) + "?\\:\\:" + LS32$),
-        //[ *4( h16 ":" ) h16 ] "::"              ls32
-    IPV6ADDRESS8$ = subexp(subexp(subexp(H16$ + "\\:") + "{0,5}" + H16$) + "?\\:\\:" + H16$),
-        //[ *5( h16 ":" ) h16 ] "::"              h16
-    IPV6ADDRESS9$ = subexp(subexp(subexp(H16$ + "\\:") + "{0,6}" + H16$) + "?\\:\\:"),
-        //[ *6( h16 ":" ) h16 ] "::"
-    IPV6ADDRESS$ = subexp([IPV6ADDRESS1$, IPV6ADDRESS2$, IPV6ADDRESS3$, IPV6ADDRESS4$, IPV6ADDRESS5$, IPV6ADDRESS6$, IPV6ADDRESS7$, IPV6ADDRESS8$, IPV6ADDRESS9$].join("|")),
-        ZONEID$ = subexp(subexp(UNRESERVED$$ + "|" + PCT_ENCODED$) + "+"),
-        //RFC 6874
-    IPV6ADDRZ$ = subexp(IPV6ADDRESS$ + "\\%25" + ZONEID$),
-        //RFC 6874
-    IPV6ADDRZ_RELAXED$ = subexp(IPV6ADDRESS$ + subexp("\\%25|\\%(?!" + HEXDIG$$ + "{2})") + ZONEID$),
-        //RFC 6874, with relaxed parsing rules
-    IPVFUTURE$ = subexp("[vV]" + HEXDIG$$ + "+\\." + merge(UNRESERVED$$, SUB_DELIMS$$, "[\\:]") + "+"),
-        IP_LITERAL$ = subexp("\\[" + subexp(IPV6ADDRZ_RELAXED$ + "|" + IPV6ADDRESS$ + "|" + IPVFUTURE$) + "\\]"),
-        //RFC 6874
-    REG_NAME$ = subexp(subexp(PCT_ENCODED$ + "|" + merge(UNRESERVED$$, SUB_DELIMS$$)) + "*"),
-        HOST$ = subexp(IP_LITERAL$ + "|" + IPV4ADDRESS$ + "(?!" + REG_NAME$ + ")" + "|" + REG_NAME$),
-        PORT$ = subexp(DIGIT$$ + "*"),
-        AUTHORITY$ = subexp(subexp(USERINFO$ + "@") + "?" + HOST$ + subexp("\\:" + PORT$) + "?"),
-        PCHAR$ = subexp(PCT_ENCODED$ + "|" + merge(UNRESERVED$$, SUB_DELIMS$$, "[\\:\\@]")),
-        SEGMENT$ = subexp(PCHAR$ + "*"),
-        SEGMENT_NZ$ = subexp(PCHAR$ + "+"),
-        SEGMENT_NZ_NC$ = subexp(subexp(PCT_ENCODED$ + "|" + merge(UNRESERVED$$, SUB_DELIMS$$, "[\\@]")) + "+"),
-        PATH_ABEMPTY$ = subexp(subexp("\\/" + SEGMENT$) + "*"),
-        PATH_ABSOLUTE$ = subexp("\\/" + subexp(SEGMENT_NZ$ + PATH_ABEMPTY$) + "?"),
-        //simplified
-    PATH_NOSCHEME$ = subexp(SEGMENT_NZ_NC$ + PATH_ABEMPTY$),
-        //simplified
-    PATH_ROOTLESS$ = subexp(SEGMENT_NZ$ + PATH_ABEMPTY$),
-        //simplified
-    PATH_EMPTY$ = "(?!" + PCHAR$ + ")",
-        PATH$ = subexp(PATH_ABEMPTY$ + "|" + PATH_ABSOLUTE$ + "|" + PATH_NOSCHEME$ + "|" + PATH_ROOTLESS$ + "|" + PATH_EMPTY$),
-        QUERY$ = subexp(subexp(PCHAR$ + "|" + merge("[\\/\\?]", IPRIVATE$$)) + "*"),
-        FRAGMENT$ = subexp(subexp(PCHAR$ + "|[\\/\\?]") + "*"),
-        HIER_PART$ = subexp(subexp("\\/\\/" + AUTHORITY$ + PATH_ABEMPTY$) + "|" + PATH_ABSOLUTE$ + "|" + PATH_ROOTLESS$ + "|" + PATH_EMPTY$),
-        URI$ = subexp(SCHEME$ + "\\:" + HIER_PART$ + subexp("\\?" + QUERY$) + "?" + subexp("\\#" + FRAGMENT$) + "?"),
-        RELATIVE_PART$ = subexp(subexp("\\/\\/" + AUTHORITY$ + PATH_ABEMPTY$) + "|" + PATH_ABSOLUTE$ + "|" + PATH_NOSCHEME$ + "|" + PATH_EMPTY$),
-        RELATIVE$ = subexp(RELATIVE_PART$ + subexp("\\?" + QUERY$) + "?" + subexp("\\#" + FRAGMENT$) + "?"),
-        URI_REFERENCE$ = subexp(URI$ + "|" + RELATIVE$),
-        ABSOLUTE_URI$ = subexp(SCHEME$ + "\\:" + HIER_PART$ + subexp("\\?" + QUERY$) + "?"),
-        GENERIC_REF$ = "^(" + SCHEME$ + ")\\:" + subexp(subexp("\\/\\/(" + subexp("(" + USERINFO$ + ")@") + "?(" + HOST$ + ")" + subexp("\\:(" + PORT$ + ")") + "?)") + "?(" + PATH_ABEMPTY$ + "|" + PATH_ABSOLUTE$ + "|" + PATH_ROOTLESS$ + "|" + PATH_EMPTY$ + ")") + subexp("\\?(" + QUERY$ + ")") + "?" + subexp("\\#(" + FRAGMENT$ + ")") + "?$",
-        RELATIVE_REF$ = "^(){0}" + subexp(subexp("\\/\\/(" + subexp("(" + USERINFO$ + ")@") + "?(" + HOST$ + ")" + subexp("\\:(" + PORT$ + ")") + "?)") + "?(" + PATH_ABEMPTY$ + "|" + PATH_ABSOLUTE$ + "|" + PATH_NOSCHEME$ + "|" + PATH_EMPTY$ + ")") + subexp("\\?(" + QUERY$ + ")") + "?" + subexp("\\#(" + FRAGMENT$ + ")") + "?$",
-        ABSOLUTE_REF$ = "^(" + SCHEME$ + ")\\:" + subexp(subexp("\\/\\/(" + subexp("(" + USERINFO$ + ")@") + "?(" + HOST$ + ")" + subexp("\\:(" + PORT$ + ")") + "?)") + "?(" + PATH_ABEMPTY$ + "|" + PATH_ABSOLUTE$ + "|" + PATH_ROOTLESS$ + "|" + PATH_EMPTY$ + ")") + subexp("\\?(" + QUERY$ + ")") + "?$",
-        SAMEDOC_REF$ = "^" + subexp("\\#(" + FRAGMENT$ + ")") + "?$",
-        AUTHORITY_REF$ = "^" + subexp("(" + USERINFO$ + ")@") + "?(" + HOST$ + ")" + subexp("\\:(" + PORT$ + ")") + "?$";
-    return {
-        NOT_SCHEME: new RegExp(merge("[^]", ALPHA$$, DIGIT$$, "[\\+\\-\\.]"), "g"),
-        NOT_USERINFO: new RegExp(merge("[^\\%\\:]", UNRESERVED$$, SUB_DELIMS$$), "g"),
-        NOT_HOST: new RegExp(merge("[^\\%\\[\\]\\:]", UNRESERVED$$, SUB_DELIMS$$), "g"),
-        NOT_PATH: new RegExp(merge("[^\\%\\/\\:\\@]", UNRESERVED$$, SUB_DELIMS$$), "g"),
-        NOT_PATH_NOSCHEME: new RegExp(merge("[^\\%\\/\\@]", UNRESERVED$$, SUB_DELIMS$$), "g"),
-        NOT_QUERY: new RegExp(merge("[^\\%]", UNRESERVED$$, SUB_DELIMS$$, "[\\:\\@\\/\\?]", IPRIVATE$$), "g"),
-        NOT_FRAGMENT: new RegExp(merge("[^\\%]", UNRESERVED$$, SUB_DELIMS$$, "[\\:\\@\\/\\?]"), "g"),
-        ESCAPE: new RegExp(merge("[^]", UNRESERVED$$, SUB_DELIMS$$), "g"),
-        UNRESERVED: new RegExp(UNRESERVED$$, "g"),
-        OTHER_CHARS: new RegExp(merge("[^\\%]", UNRESERVED$$, RESERVED$$), "g"),
-        PCT_ENCODED: new RegExp(PCT_ENCODED$, "g"),
-        IPV4ADDRESS: new RegExp("^(" + IPV4ADDRESS$ + ")$"),
-        IPV6ADDRESS: new RegExp("^\\[?(" + IPV6ADDRESS$ + ")" + subexp(subexp("\\%25|\\%(?!" + HEXDIG$$ + "{2})") + "(" + ZONEID$ + ")") + "?\\]?$") //RFC 6874, with relaxed parsing rules
-    };
-}
-var URI_PROTOCOL = buildExps(false);
-
-var IRI_PROTOCOL = buildExps(true);
-
-var slicedToArray = function () {
-  function sliceIterator(arr, i) {
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-    var _e = undefined;
-
-    try {
-      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"]) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  return function (arr, i) {
-    if (Array.isArray(arr)) {
-      return arr;
-    } else if (Symbol.iterator in Object(arr)) {
-      return sliceIterator(arr, i);
-    } else {
-      throw new TypeError("Invalid attempt to destructure non-iterable instance");
-    }
-  };
-}();
-
-
-
-
-
-
-
-
-
-
-
-
-
-var toConsumableArray = function (arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-    return arr2;
-  } else {
-    return Array.from(arr);
-  }
-};
-
-/** Highest positive signed 32-bit float value */
-
-var maxInt = 2147483647; // aka. 0x7FFFFFFF or 2^31-1
-
-/** Bootstring parameters */
-var base = 36;
-var tMin = 1;
-var tMax = 26;
-var skew = 38;
-var damp = 700;
-var initialBias = 72;
-var initialN = 128; // 0x80
-var delimiter = '-'; // '\x2D'
-
-/** Regular expressions */
-var regexPunycode = /^xn--/;
-var regexNonASCII = /[^\0-\x7E]/; // non-ASCII chars
-var regexSeparators = /[\x2E\u3002\uFF0E\uFF61]/g; // RFC 3490 separators
-
-/** Error messages */
-var errors = {
-	'overflow': 'Overflow: input needs wider integers to process',
-	'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
-	'invalid-input': 'Invalid input'
-};
-
-/** Convenience shortcuts */
-var baseMinusTMin = base - tMin;
-var floor = Math.floor;
-var stringFromCharCode = String.fromCharCode;
-
-/*--------------------------------------------------------------------------*/
-
-/**
- * A generic error utility function.
- * @private
- * @param {String} type The error type.
- * @returns {Error} Throws a `RangeError` with the applicable error message.
- */
-function error$1(type) {
-	throw new RangeError(errors[type]);
-}
-
-/**
- * A generic `Array#map` utility function.
- * @private
- * @param {Array} array The array to iterate over.
- * @param {Function} callback The function that gets called for every array
- * item.
- * @returns {Array} A new array of values returned by the callback function.
- */
-function map(array, fn) {
-	var result = [];
-	var length = array.length;
-	while (length--) {
-		result[length] = fn(array[length]);
-	}
-	return result;
-}
-
-/**
- * A simple `Array#map`-like wrapper to work with domain name strings or email
- * addresses.
- * @private
- * @param {String} domain The domain name or email address.
- * @param {Function} callback The function that gets called for every
- * character.
- * @returns {Array} A new string of characters returned by the callback
- * function.
- */
-function mapDomain(string, fn) {
-	var parts = string.split('@');
-	var result = '';
-	if (parts.length > 1) {
-		// In email addresses, only the domain name should be punycoded. Leave
-		// the local part (i.e. everything up to `@`) intact.
-		result = parts[0] + '@';
-		string = parts[1];
-	}
-	// Avoid `split(regex)` for IE8 compatibility. See #17.
-	string = string.replace(regexSeparators, '\x2E');
-	var labels = string.split('.');
-	var encoded = map(labels, fn).join('.');
-	return result + encoded;
-}
-
-/**
- * Creates an array containing the numeric code points of each Unicode
- * character in the string. While JavaScript uses UCS-2 internally,
- * this function will convert a pair of surrogate halves (each of which
- * UCS-2 exposes as separate characters) into a single code point,
- * matching UTF-16.
- * @see `punycode.ucs2.encode`
- * @see <https://mathiasbynens.be/notes/javascript-encoding>
- * @memberOf punycode.ucs2
- * @name decode
- * @param {String} string The Unicode input string (UCS-2).
- * @returns {Array} The new array of code points.
- */
-function ucs2decode(string) {
-	var output = [];
-	var counter = 0;
-	var length = string.length;
-	while (counter < length) {
-		var value = string.charCodeAt(counter++);
-		if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
-			// It's a high surrogate, and there is a next character.
-			var extra = string.charCodeAt(counter++);
-			if ((extra & 0xFC00) == 0xDC00) {
-				// Low surrogate.
-				output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
-			} else {
-				// It's an unmatched surrogate; only append this code unit, in case the
-				// next code unit is the high surrogate of a surrogate pair.
-				output.push(value);
-				counter--;
-			}
-		} else {
-			output.push(value);
-		}
-	}
-	return output;
-}
-
-/**
- * Creates a string based on an array of numeric code points.
- * @see `punycode.ucs2.decode`
- * @memberOf punycode.ucs2
- * @name encode
- * @param {Array} codePoints The array of numeric code points.
- * @returns {String} The new Unicode string (UCS-2).
- */
-var ucs2encode = function ucs2encode(array) {
-	return String.fromCodePoint.apply(String, toConsumableArray(array));
-};
-
-/**
- * Converts a basic code point into a digit/integer.
- * @see `digitToBasic()`
- * @private
- * @param {Number} codePoint The basic numeric code point value.
- * @returns {Number} The numeric value of a basic code point (for use in
- * representing integers) in the range `0` to `base - 1`, or `base` if
- * the code point does not represent a value.
- */
-var basicToDigit = function basicToDigit(codePoint) {
-	if (codePoint - 0x30 < 0x0A) {
-		return codePoint - 0x16;
-	}
-	if (codePoint - 0x41 < 0x1A) {
-		return codePoint - 0x41;
-	}
-	if (codePoint - 0x61 < 0x1A) {
-		return codePoint - 0x61;
-	}
-	return base;
-};
-
-/**
- * Converts a digit/integer into a basic code point.
- * @see `basicToDigit()`
- * @private
- * @param {Number} digit The numeric value of a basic code point.
- * @returns {Number} The basic code point whose value (when used for
- * representing integers) is `digit`, which needs to be in the range
- * `0` to `base - 1`. If `flag` is non-zero, the uppercase form is
- * used; else, the lowercase form is used. The behavior is undefined
- * if `flag` is non-zero and `digit` has no uppercase form.
- */
-var digitToBasic = function digitToBasic(digit, flag) {
-	//  0..25 map to ASCII a..z or A..Z
-	// 26..35 map to ASCII 0..9
-	return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
-};
-
-/**
- * Bias adaptation function as per section 3.4 of RFC 3492.
- * https://tools.ietf.org/html/rfc3492#section-3.4
- * @private
- */
-var adapt = function adapt(delta, numPoints, firstTime) {
-	var k = 0;
-	delta = firstTime ? floor(delta / damp) : delta >> 1;
-	delta += floor(delta / numPoints);
-	for (; /* no initialization */delta > baseMinusTMin * tMax >> 1; k += base) {
-		delta = floor(delta / baseMinusTMin);
-	}
-	return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
-};
-
-/**
- * Converts a Punycode string of ASCII-only symbols to a string of Unicode
- * symbols.
- * @memberOf punycode
- * @param {String} input The Punycode string of ASCII-only symbols.
- * @returns {String} The resulting string of Unicode symbols.
- */
-var decode = function decode(input) {
-	// Don't use UCS-2.
-	var output = [];
-	var inputLength = input.length;
-	var i = 0;
-	var n = initialN;
-	var bias = initialBias;
-
-	// Handle the basic code points: let `basic` be the number of input code
-	// points before the last delimiter, or `0` if there is none, then copy
-	// the first basic code points to the output.
-
-	var basic = input.lastIndexOf(delimiter);
-	if (basic < 0) {
-		basic = 0;
-	}
-
-	for (var j = 0; j < basic; ++j) {
-		// if it's not a basic code point
-		if (input.charCodeAt(j) >= 0x80) {
-			error$1('not-basic');
-		}
-		output.push(input.charCodeAt(j));
-	}
-
-	// Main decoding loop: start just after the last delimiter if any basic code
-	// points were copied; start at the beginning otherwise.
-
-	for (var index = basic > 0 ? basic + 1 : 0; index < inputLength;) /* no final expression */{
-
-		// `index` is the index of the next character to be consumed.
-		// Decode a generalized variable-length integer into `delta`,
-		// which gets added to `i`. The overflow checking is easier
-		// if we increase `i` as we go, then subtract off its starting
-		// value at the end to obtain `delta`.
-		var oldi = i;
-		for (var w = 1, k = base;; /* no condition */k += base) {
-
-			if (index >= inputLength) {
-				error$1('invalid-input');
-			}
-
-			var digit = basicToDigit(input.charCodeAt(index++));
-
-			if (digit >= base || digit > floor((maxInt - i) / w)) {
-				error$1('overflow');
-			}
-
-			i += digit * w;
-			var t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
-
-			if (digit < t) {
-				break;
-			}
-
-			var baseMinusT = base - t;
-			if (w > floor(maxInt / baseMinusT)) {
-				error$1('overflow');
-			}
-
-			w *= baseMinusT;
-		}
-
-		var out = output.length + 1;
-		bias = adapt(i - oldi, out, oldi == 0);
-
-		// `i` was supposed to wrap around from `out` to `0`,
-		// incrementing `n` each time, so we'll fix that now:
-		if (floor(i / out) > maxInt - n) {
-			error$1('overflow');
-		}
-
-		n += floor(i / out);
-		i %= out;
-
-		// Insert `n` at position `i` of the output.
-		output.splice(i++, 0, n);
-	}
-
-	return String.fromCodePoint.apply(String, output);
-};
-
-/**
- * Converts a string of Unicode symbols (e.g. a domain name label) to a
- * Punycode string of ASCII-only symbols.
- * @memberOf punycode
- * @param {String} input The string of Unicode symbols.
- * @returns {String} The resulting Punycode string of ASCII-only symbols.
- */
-var encode = function encode(input) {
-	var output = [];
-
-	// Convert the input in UCS-2 to an array of Unicode code points.
-	input = ucs2decode(input);
-
-	// Cache the length.
-	var inputLength = input.length;
-
-	// Initialize the state.
-	var n = initialN;
-	var delta = 0;
-	var bias = initialBias;
-
-	// Handle the basic code points.
-	var _iteratorNormalCompletion = true;
-	var _didIteratorError = false;
-	var _iteratorError = undefined;
-
-	try {
-		for (var _iterator = input[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-			var _currentValue2 = _step.value;
-
-			if (_currentValue2 < 0x80) {
-				output.push(stringFromCharCode(_currentValue2));
-			}
-		}
-	} catch (err) {
-		_didIteratorError = true;
-		_iteratorError = err;
-	} finally {
-		try {
-			if (!_iteratorNormalCompletion && _iterator.return) {
-				_iterator.return();
-			}
-		} finally {
-			if (_didIteratorError) {
-				throw _iteratorError;
-			}
-		}
-	}
-
-	var basicLength = output.length;
-	var handledCPCount = basicLength;
-
-	// `handledCPCount` is the number of code points that have been handled;
-	// `basicLength` is the number of basic code points.
-
-	// Finish the basic string with a delimiter unless it's empty.
-	if (basicLength) {
-		output.push(delimiter);
-	}
-
-	// Main encoding loop:
-	while (handledCPCount < inputLength) {
-
-		// All non-basic code points < n have been handled already. Find the next
-		// larger one:
-		var m = maxInt;
-		var _iteratorNormalCompletion2 = true;
-		var _didIteratorError2 = false;
-		var _iteratorError2 = undefined;
-
-		try {
-			for (var _iterator2 = input[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-				var currentValue = _step2.value;
-
-				if (currentValue >= n && currentValue < m) {
-					m = currentValue;
-				}
-			}
-
-			// Increase `delta` enough to advance the decoder's <n,i> state to <m,0>,
-			// but guard against overflow.
-		} catch (err) {
-			_didIteratorError2 = true;
-			_iteratorError2 = err;
-		} finally {
-			try {
-				if (!_iteratorNormalCompletion2 && _iterator2.return) {
-					_iterator2.return();
-				}
-			} finally {
-				if (_didIteratorError2) {
-					throw _iteratorError2;
-				}
-			}
-		}
-
-		var handledCPCountPlusOne = handledCPCount + 1;
-		if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
-			error$1('overflow');
-		}
-
-		delta += (m - n) * handledCPCountPlusOne;
-		n = m;
-
-		var _iteratorNormalCompletion3 = true;
-		var _didIteratorError3 = false;
-		var _iteratorError3 = undefined;
-
-		try {
-			for (var _iterator3 = input[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-				var _currentValue = _step3.value;
-
-				if (_currentValue < n && ++delta > maxInt) {
-					error$1('overflow');
-				}
-				if (_currentValue == n) {
-					// Represent delta as a generalized variable-length integer.
-					var q = delta;
-					for (var k = base;; /* no condition */k += base) {
-						var t = k <= bias ? tMin : k >= bias + tMax ? tMax : k - bias;
-						if (q < t) {
-							break;
-						}
-						var qMinusT = q - t;
-						var baseMinusT = base - t;
-						output.push(stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0)));
-						q = floor(qMinusT / baseMinusT);
-					}
-
-					output.push(stringFromCharCode(digitToBasic(q, 0)));
-					bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
-					delta = 0;
-					++handledCPCount;
-				}
-			}
-		} catch (err) {
-			_didIteratorError3 = true;
-			_iteratorError3 = err;
-		} finally {
-			try {
-				if (!_iteratorNormalCompletion3 && _iterator3.return) {
-					_iterator3.return();
-				}
-			} finally {
-				if (_didIteratorError3) {
-					throw _iteratorError3;
-				}
-			}
-		}
-
-		++delta;
-		++n;
-	}
-	return output.join('');
-};
-
-/**
- * Converts a Punycode string representing a domain name or an email address
- * to Unicode. Only the Punycoded parts of the input will be converted, i.e.
- * it doesn't matter if you call it on a string that has already been
- * converted to Unicode.
- * @memberOf punycode
- * @param {String} input The Punycoded domain name or email address to
- * convert to Unicode.
- * @returns {String} The Unicode representation of the given Punycode
- * string.
- */
-var toUnicode = function toUnicode(input) {
-	return mapDomain(input, function (string) {
-		return regexPunycode.test(string) ? decode(string.slice(4).toLowerCase()) : string;
-	});
-};
-
-/**
- * Converts a Unicode string representing a domain name or an email address to
- * Punycode. Only the non-ASCII parts of the domain name will be converted,
- * i.e. it doesn't matter if you call it with a domain that's already in
- * ASCII.
- * @memberOf punycode
- * @param {String} input The domain name or email address to convert, as a
- * Unicode string.
- * @returns {String} The Punycode representation of the given domain name or
- * email address.
- */
-var toASCII = function toASCII(input) {
-	return mapDomain(input, function (string) {
-		return regexNonASCII.test(string) ? 'xn--' + encode(string) : string;
-	});
-};
-
-/*--------------------------------------------------------------------------*/
-
-/** Define the public API */
-var punycode = {
-	/**
-  * A string representing the current Punycode.js version number.
-  * @memberOf punycode
-  * @type String
-  */
-	'version': '2.1.0',
-	/**
-  * An object of methods to convert from JavaScript's internal character
-  * representation (UCS-2) to Unicode code points, and back.
-  * @see <https://mathiasbynens.be/notes/javascript-encoding>
-  * @memberOf punycode
-  * @type Object
-  */
-	'ucs2': {
-		'decode': ucs2decode,
-		'encode': ucs2encode
-	},
-	'decode': decode,
-	'encode': encode,
-	'toASCII': toASCII,
-	'toUnicode': toUnicode
-};
-
-/**
- * URI.js
- *
- * @fileoverview An RFC 3986 compliant, scheme extendable URI parsing/validating/resolving library for JavaScript.
- * @author <a href="mailto:gary.court@gmail.com">Gary Court</a>
- * @see http://github.com/garycourt/uri-js
- */
-/**
- * Copyright 2011 Gary Court. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- *    1. Redistributions of source code must retain the above copyright notice, this list of
- *       conditions and the following disclaimer.
- *
- *    2. Redistributions in binary form must reproduce the above copyright notice, this list
- *       of conditions and the following disclaimer in the documentation and/or other materials
- *       provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY GARY COURT ``AS IS'' AND ANY EXPRESS OR IMPLIED
- * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
- * FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL GARY COURT OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * The views and conclusions contained in the software and documentation are those of the
- * authors and should not be interpreted as representing official policies, either expressed
- * or implied, of Gary Court.
- */
-var SCHEMES = {};
-function pctEncChar(chr) {
-    var c = chr.charCodeAt(0);
-    var e = void 0;
-    if (c < 16) e = "%0" + c.toString(16).toUpperCase();else if (c < 128) e = "%" + c.toString(16).toUpperCase();else if (c < 2048) e = "%" + (c >> 6 | 192).toString(16).toUpperCase() + "%" + (c & 63 | 128).toString(16).toUpperCase();else e = "%" + (c >> 12 | 224).toString(16).toUpperCase() + "%" + (c >> 6 & 63 | 128).toString(16).toUpperCase() + "%" + (c & 63 | 128).toString(16).toUpperCase();
-    return e;
-}
-function pctDecChars(str) {
-    var newStr = "";
-    var i = 0;
-    var il = str.length;
-    while (i < il) {
-        var c = parseInt(str.substr(i + 1, 2), 16);
-        if (c < 128) {
-            newStr += String.fromCharCode(c);
-            i += 3;
-        } else if (c >= 194 && c < 224) {
-            if (il - i >= 6) {
-                var c2 = parseInt(str.substr(i + 4, 2), 16);
-                newStr += String.fromCharCode((c & 31) << 6 | c2 & 63);
-            } else {
-                newStr += str.substr(i, 6);
-            }
-            i += 6;
-        } else if (c >= 224) {
-            if (il - i >= 9) {
-                var _c = parseInt(str.substr(i + 4, 2), 16);
-                var c3 = parseInt(str.substr(i + 7, 2), 16);
-                newStr += String.fromCharCode((c & 15) << 12 | (_c & 63) << 6 | c3 & 63);
-            } else {
-                newStr += str.substr(i, 9);
-            }
-            i += 9;
-        } else {
-            newStr += str.substr(i, 3);
-            i += 3;
-        }
-    }
-    return newStr;
-}
-function _normalizeComponentEncoding(components, protocol) {
-    function decodeUnreserved(str) {
-        var decStr = pctDecChars(str);
-        return !decStr.match(protocol.UNRESERVED) ? str : decStr;
-    }
-    if (components.scheme) components.scheme = String(components.scheme).replace(protocol.PCT_ENCODED, decodeUnreserved).toLowerCase().replace(protocol.NOT_SCHEME, "");
-    if (components.userinfo !== undefined) components.userinfo = String(components.userinfo).replace(protocol.PCT_ENCODED, decodeUnreserved).replace(protocol.NOT_USERINFO, pctEncChar).replace(protocol.PCT_ENCODED, toUpperCase);
-    if (components.host !== undefined) components.host = String(components.host).replace(protocol.PCT_ENCODED, decodeUnreserved).toLowerCase().replace(protocol.NOT_HOST, pctEncChar).replace(protocol.PCT_ENCODED, toUpperCase);
-    if (components.path !== undefined) components.path = String(components.path).replace(protocol.PCT_ENCODED, decodeUnreserved).replace(components.scheme ? protocol.NOT_PATH : protocol.NOT_PATH_NOSCHEME, pctEncChar).replace(protocol.PCT_ENCODED, toUpperCase);
-    if (components.query !== undefined) components.query = String(components.query).replace(protocol.PCT_ENCODED, decodeUnreserved).replace(protocol.NOT_QUERY, pctEncChar).replace(protocol.PCT_ENCODED, toUpperCase);
-    if (components.fragment !== undefined) components.fragment = String(components.fragment).replace(protocol.PCT_ENCODED, decodeUnreserved).replace(protocol.NOT_FRAGMENT, pctEncChar).replace(protocol.PCT_ENCODED, toUpperCase);
-    return components;
-}
-
-function _stripLeadingZeros(str) {
-    return str.replace(/^0*(.*)/, "$1") || "0";
-}
-function _normalizeIPv4(host, protocol) {
-    var matches = host.match(protocol.IPV4ADDRESS) || [];
-
-    var _matches = slicedToArray(matches, 2),
-        address = _matches[1];
-
-    if (address) {
-        return address.split(".").map(_stripLeadingZeros).join(".");
-    } else {
-        return host;
-    }
-}
-function _normalizeIPv6(host, protocol) {
-    var matches = host.match(protocol.IPV6ADDRESS) || [];
-
-    var _matches2 = slicedToArray(matches, 3),
-        address = _matches2[1],
-        zone = _matches2[2];
-
-    if (address) {
-        var _address$toLowerCase$ = address.toLowerCase().split('::').reverse(),
-            _address$toLowerCase$2 = slicedToArray(_address$toLowerCase$, 2),
-            last = _address$toLowerCase$2[0],
-            first = _address$toLowerCase$2[1];
-
-        var firstFields = first ? first.split(":").map(_stripLeadingZeros) : [];
-        var lastFields = last.split(":").map(_stripLeadingZeros);
-        var isLastFieldIPv4Address = protocol.IPV4ADDRESS.test(lastFields[lastFields.length - 1]);
-        var fieldCount = isLastFieldIPv4Address ? 7 : 8;
-        var lastFieldsStart = lastFields.length - fieldCount;
-        var fields = Array(fieldCount);
-        for (var x = 0; x < fieldCount; ++x) {
-            fields[x] = firstFields[x] || lastFields[lastFieldsStart + x] || '';
-        }
-        if (isLastFieldIPv4Address) {
-            fields[fieldCount - 1] = _normalizeIPv4(fields[fieldCount - 1], protocol);
-        }
-        var allZeroFields = fields.reduce(function (acc, field, index) {
-            if (!field || field === "0") {
-                var lastLongest = acc[acc.length - 1];
-                if (lastLongest && lastLongest.index + lastLongest.length === index) {
-                    lastLongest.length++;
-                } else {
-                    acc.push({ index: index, length: 1 });
-                }
-            }
-            return acc;
-        }, []);
-        var longestZeroFields = allZeroFields.sort(function (a, b) {
-            return b.length - a.length;
-        })[0];
-        var newHost = void 0;
-        if (longestZeroFields && longestZeroFields.length > 1) {
-            var newFirst = fields.slice(0, longestZeroFields.index);
-            var newLast = fields.slice(longestZeroFields.index + longestZeroFields.length);
-            newHost = newFirst.join(":") + "::" + newLast.join(":");
-        } else {
-            newHost = fields.join(":");
-        }
-        if (zone) {
-            newHost += "%" + zone;
-        }
-        return newHost;
-    } else {
-        return host;
-    }
-}
-var URI_PARSE = /^(?:([^:\/?#]+):)?(?:\/\/((?:([^\/?#@]*)@)?(\[[^\/?#\]]+\]|[^\/?#:]*)(?:\:(\d*))?))?([^?#]*)(?:\?([^#]*))?(?:#((?:.|\n|\r)*))?/i;
-var NO_MATCH_IS_UNDEFINED = "".match(/(){0}/)[1] === undefined;
-function parse(uriString) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    var components = {};
-    var protocol = options.iri !== false ? IRI_PROTOCOL : URI_PROTOCOL;
-    if (options.reference === "suffix") uriString = (options.scheme ? options.scheme + ":" : "") + "//" + uriString;
-    var matches = uriString.match(URI_PARSE);
-    if (matches) {
-        if (NO_MATCH_IS_UNDEFINED) {
-            //store each component
-            components.scheme = matches[1];
-            components.userinfo = matches[3];
-            components.host = matches[4];
-            components.port = parseInt(matches[5], 10);
-            components.path = matches[6] || "";
-            components.query = matches[7];
-            components.fragment = matches[8];
-            //fix port number
-            if (isNaN(components.port)) {
-                components.port = matches[5];
-            }
-        } else {
-            //IE FIX for improper RegExp matching
-            //store each component
-            components.scheme = matches[1] || undefined;
-            components.userinfo = uriString.indexOf("@") !== -1 ? matches[3] : undefined;
-            components.host = uriString.indexOf("//") !== -1 ? matches[4] : undefined;
-            components.port = parseInt(matches[5], 10);
-            components.path = matches[6] || "";
-            components.query = uriString.indexOf("?") !== -1 ? matches[7] : undefined;
-            components.fragment = uriString.indexOf("#") !== -1 ? matches[8] : undefined;
-            //fix port number
-            if (isNaN(components.port)) {
-                components.port = uriString.match(/\/\/(?:.|\n)*\:(?:\/|\?|\#|$)/) ? matches[4] : undefined;
-            }
-        }
-        if (components.host) {
-            //normalize IP hosts
-            components.host = _normalizeIPv6(_normalizeIPv4(components.host, protocol), protocol);
-        }
-        //determine reference type
-        if (components.scheme === undefined && components.userinfo === undefined && components.host === undefined && components.port === undefined && !components.path && components.query === undefined) {
-            components.reference = "same-document";
-        } else if (components.scheme === undefined) {
-            components.reference = "relative";
-        } else if (components.fragment === undefined) {
-            components.reference = "absolute";
-        } else {
-            components.reference = "uri";
-        }
-        //check for reference errors
-        if (options.reference && options.reference !== "suffix" && options.reference !== components.reference) {
-            components.error = components.error || "URI is not a " + options.reference + " reference.";
-        }
-        //find scheme handler
-        var schemeHandler = SCHEMES[(options.scheme || components.scheme || "").toLowerCase()];
-        //check if scheme can't handle IRIs
-        if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
-            //if host component is a domain name
-            if (components.host && (options.domainHost || schemeHandler && schemeHandler.domainHost)) {
-                //convert Unicode IDN -> ASCII IDN
-                try {
-                    components.host = punycode.toASCII(components.host.replace(protocol.PCT_ENCODED, pctDecChars).toLowerCase());
-                } catch (e) {
-                    components.error = components.error || "Host's domain name can not be converted to ASCII via punycode: " + e;
-                }
-            }
-            //convert IRI -> URI
-            _normalizeComponentEncoding(components, URI_PROTOCOL);
-        } else {
-            //normalize encodings
-            _normalizeComponentEncoding(components, protocol);
-        }
-        //perform scheme specific parsing
-        if (schemeHandler && schemeHandler.parse) {
-            schemeHandler.parse(components, options);
-        }
-    } else {
-        components.error = components.error || "URI can not be parsed.";
-    }
-    return components;
-}
-
-function _recomposeAuthority(components, options) {
-    var protocol = options.iri !== false ? IRI_PROTOCOL : URI_PROTOCOL;
-    var uriTokens = [];
-    if (components.userinfo !== undefined) {
-        uriTokens.push(components.userinfo);
-        uriTokens.push("@");
-    }
-    if (components.host !== undefined) {
-        //normalize IP hosts, add brackets and escape zone separator for IPv6
-        uriTokens.push(_normalizeIPv6(_normalizeIPv4(String(components.host), protocol), protocol).replace(protocol.IPV6ADDRESS, function (_, $1, $2) {
-            return "[" + $1 + ($2 ? "%25" + $2 : "") + "]";
-        }));
-    }
-    if (typeof components.port === "number" || typeof components.port === "string") {
-        uriTokens.push(":");
-        uriTokens.push(String(components.port));
-    }
-    return uriTokens.length ? uriTokens.join("") : undefined;
-}
-
-var RDS1 = /^\.\.?\//;
-var RDS2 = /^\/\.(\/|$)/;
-var RDS3 = /^\/\.\.(\/|$)/;
-var RDS5 = /^\/?(?:.|\n)*?(?=\/|$)/;
-function removeDotSegments(input) {
-    var output = [];
-    while (input.length) {
-        if (input.match(RDS1)) {
-            input = input.replace(RDS1, "");
-        } else if (input.match(RDS2)) {
-            input = input.replace(RDS2, "/");
-        } else if (input.match(RDS3)) {
-            input = input.replace(RDS3, "/");
-            output.pop();
-        } else if (input === "." || input === "..") {
-            input = "";
-        } else {
-            var im = input.match(RDS5);
-            if (im) {
-                var s = im[0];
-                input = input.slice(s.length);
-                output.push(s);
-            } else {
-                throw new Error("Unexpected dot segment condition");
-            }
-        }
-    }
-    return output.join("");
-}
-
-function serialize(components) {
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
-
-    var protocol = options.iri ? IRI_PROTOCOL : URI_PROTOCOL;
-    var uriTokens = [];
-    //find scheme handler
-    var schemeHandler = SCHEMES[(options.scheme || components.scheme || "").toLowerCase()];
-    //perform scheme specific serialization
-    if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(components, options);
-    if (components.host) {
-        //if host component is an IPv6 address
-        if (protocol.IPV6ADDRESS.test(components.host)) {}
-        //TODO: normalize IPv6 address as per RFC 5952
-
-        //if host component is a domain name
-        else if (options.domainHost || schemeHandler && schemeHandler.domainHost) {
-                //convert IDN via punycode
-                try {
-                    components.host = !options.iri ? punycode.toASCII(components.host.replace(protocol.PCT_ENCODED, pctDecChars).toLowerCase()) : punycode.toUnicode(components.host);
-                } catch (e) {
-                    components.error = components.error || "Host's domain name can not be converted to " + (!options.iri ? "ASCII" : "Unicode") + " via punycode: " + e;
-                }
-            }
-    }
-    //normalize encoding
-    _normalizeComponentEncoding(components, protocol);
-    if (options.reference !== "suffix" && components.scheme) {
-        uriTokens.push(components.scheme);
-        uriTokens.push(":");
-    }
-    var authority = _recomposeAuthority(components, options);
-    if (authority !== undefined) {
-        if (options.reference !== "suffix") {
-            uriTokens.push("//");
-        }
-        uriTokens.push(authority);
-        if (components.path && components.path.charAt(0) !== "/") {
-            uriTokens.push("/");
-        }
-    }
-    if (components.path !== undefined) {
-        var s = components.path;
-        if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
-            s = removeDotSegments(s);
-        }
-        if (authority === undefined) {
-            s = s.replace(/^\/\//, "/%2F"); //don't allow the path to start with "//"
-        }
-        uriTokens.push(s);
-    }
-    if (components.query !== undefined) {
-        uriTokens.push("?");
-        uriTokens.push(components.query);
-    }
-    if (components.fragment !== undefined) {
-        uriTokens.push("#");
-        uriTokens.push(components.fragment);
-    }
-    return uriTokens.join(""); //merge tokens into a string
-}
-
-function resolveComponents(base, relative) {
-    var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
-    var skipNormalization = arguments[3];
-
-    var target = {};
-    if (!skipNormalization) {
-        base = parse(serialize(base, options), options); //normalize base components
-        relative = parse(serialize(relative, options), options); //normalize relative components
-    }
-    options = options || {};
-    if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        //target.authority = relative.authority;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
-    } else {
-        if (relative.userinfo !== undefined || relative.host !== undefined || relative.port !== undefined) {
-            //target.authority = relative.authority;
-            target.userinfo = relative.userinfo;
-            target.host = relative.host;
-            target.port = relative.port;
-            target.path = removeDotSegments(relative.path || "");
-            target.query = relative.query;
-        } else {
-            if (!relative.path) {
-                target.path = base.path;
-                if (relative.query !== undefined) {
-                    target.query = relative.query;
-                } else {
-                    target.query = base.query;
-                }
-            } else {
-                if (relative.path.charAt(0) === "/") {
-                    target.path = removeDotSegments(relative.path);
-                } else {
-                    if ((base.userinfo !== undefined || base.host !== undefined || base.port !== undefined) && !base.path) {
-                        target.path = "/" + relative.path;
-                    } else if (!base.path) {
-                        target.path = relative.path;
-                    } else {
-                        target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
-                    }
-                    target.path = removeDotSegments(target.path);
-                }
-                target.query = relative.query;
-            }
-            //target.authority = base.authority;
-            target.userinfo = base.userinfo;
-            target.host = base.host;
-            target.port = base.port;
-        }
-        target.scheme = base.scheme;
-    }
-    target.fragment = relative.fragment;
-    return target;
-}
-
-function resolve(baseURI, relativeURI, options) {
-    var schemelessOptions = assign({ scheme: 'null' }, options);
-    return serialize(resolveComponents(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true), schemelessOptions);
-}
-
-function normalize(uri, options) {
-    if (typeof uri === "string") {
-        uri = serialize(parse(uri, options), options);
-    } else if (typeOf(uri) === "object") {
-        uri = parse(serialize(uri, options), options);
-    }
-    return uri;
-}
-
-function equal(uriA, uriB, options) {
-    if (typeof uriA === "string") {
-        uriA = serialize(parse(uriA, options), options);
-    } else if (typeOf(uriA) === "object") {
-        uriA = serialize(uriA, options);
-    }
-    if (typeof uriB === "string") {
-        uriB = serialize(parse(uriB, options), options);
-    } else if (typeOf(uriB) === "object") {
-        uriB = serialize(uriB, options);
-    }
-    return uriA === uriB;
-}
-
-function escapeComponent(str, options) {
-    return str && str.toString().replace(!options || !options.iri ? URI_PROTOCOL.ESCAPE : IRI_PROTOCOL.ESCAPE, pctEncChar);
-}
-
-function unescapeComponent(str, options) {
-    return str && str.toString().replace(!options || !options.iri ? URI_PROTOCOL.PCT_ENCODED : IRI_PROTOCOL.PCT_ENCODED, pctDecChars);
-}
-
-var handler = {
-    scheme: "http",
-    domainHost: true,
-    parse: function parse(components, options) {
-        //report missing host
-        if (!components.host) {
-            components.error = components.error || "HTTP URIs must have a host.";
-        }
-        return components;
-    },
-    serialize: function serialize(components, options) {
-        var secure = String(components.scheme).toLowerCase() === "https";
-        //normalize the default port
-        if (components.port === (secure ? 443 : 80) || components.port === "") {
-            components.port = undefined;
-        }
-        //normalize the empty path
-        if (!components.path) {
-            components.path = "/";
-        }
-        //NOTE: We do not parse query strings for HTTP URIs
-        //as WWW Form Url Encoded query strings are part of the HTML4+ spec,
-        //and not the HTTP spec.
-        return components;
-    }
-};
-
-var handler$1 = {
-    scheme: "https",
-    domainHost: handler.domainHost,
-    parse: handler.parse,
-    serialize: handler.serialize
-};
-
-function isSecure(wsComponents) {
-    return typeof wsComponents.secure === 'boolean' ? wsComponents.secure : String(wsComponents.scheme).toLowerCase() === "wss";
-}
-//RFC 6455
-var handler$2 = {
-    scheme: "ws",
-    domainHost: true,
-    parse: function parse(components, options) {
-        var wsComponents = components;
-        //indicate if the secure flag is set
-        wsComponents.secure = isSecure(wsComponents);
-        //construct resouce name
-        wsComponents.resourceName = (wsComponents.path || '/') + (wsComponents.query ? '?' + wsComponents.query : '');
-        wsComponents.path = undefined;
-        wsComponents.query = undefined;
-        return wsComponents;
-    },
-    serialize: function serialize(wsComponents, options) {
-        //normalize the default port
-        if (wsComponents.port === (isSecure(wsComponents) ? 443 : 80) || wsComponents.port === "") {
-            wsComponents.port = undefined;
-        }
-        //ensure scheme matches secure flag
-        if (typeof wsComponents.secure === 'boolean') {
-            wsComponents.scheme = wsComponents.secure ? 'wss' : 'ws';
-            wsComponents.secure = undefined;
-        }
-        //reconstruct path from resource name
-        if (wsComponents.resourceName) {
-            var _wsComponents$resourc = wsComponents.resourceName.split('?'),
-                _wsComponents$resourc2 = slicedToArray(_wsComponents$resourc, 2),
-                path = _wsComponents$resourc2[0],
-                query = _wsComponents$resourc2[1];
-
-            wsComponents.path = path && path !== '/' ? path : undefined;
-            wsComponents.query = query;
-            wsComponents.resourceName = undefined;
-        }
-        //forbid fragment component
-        wsComponents.fragment = undefined;
-        return wsComponents;
-    }
-};
-
-var handler$3 = {
-    scheme: "wss",
-    domainHost: handler$2.domainHost,
-    parse: handler$2.parse,
-    serialize: handler$2.serialize
-};
-
-var O = {};
-var isIRI = true;
-//RFC 3986
-var UNRESERVED$$ = "[A-Za-z0-9\\-\\.\\_\\~" + (isIRI ? "\\xA0-\\u200D\\u2010-\\u2029\\u202F-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFEF" : "") + "]";
-var HEXDIG$$ = "[0-9A-Fa-f]"; //case-insensitive
-var PCT_ENCODED$ = subexp(subexp("%[EFef]" + HEXDIG$$ + "%" + HEXDIG$$ + HEXDIG$$ + "%" + HEXDIG$$ + HEXDIG$$) + "|" + subexp("%[89A-Fa-f]" + HEXDIG$$ + "%" + HEXDIG$$ + HEXDIG$$) + "|" + subexp("%" + HEXDIG$$ + HEXDIG$$)); //expanded
-//RFC 5322, except these symbols as per RFC 6068: @ : / ? # [ ] & ; =
-//const ATEXT$$ = "[A-Za-z0-9\\!\\#\\$\\%\\&\\'\\*\\+\\-\\/\\=\\?\\^\\_\\`\\{\\|\\}\\~]";
-//const WSP$$ = "[\\x20\\x09]";
-//const OBS_QTEXT$$ = "[\\x01-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]";  //(%d1-8 / %d11-12 / %d14-31 / %d127)
-//const QTEXT$$ = merge("[\\x21\\x23-\\x5B\\x5D-\\x7E]", OBS_QTEXT$$);  //%d33 / %d35-91 / %d93-126 / obs-qtext
-//const VCHAR$$ = "[\\x21-\\x7E]";
-//const WSP$$ = "[\\x20\\x09]";
-//const OBS_QP$ = subexp("\\\\" + merge("[\\x00\\x0D\\x0A]", OBS_QTEXT$$));  //%d0 / CR / LF / obs-qtext
-//const FWS$ = subexp(subexp(WSP$$ + "*" + "\\x0D\\x0A") + "?" + WSP$$ + "+");
-//const QUOTED_PAIR$ = subexp(subexp("\\\\" + subexp(VCHAR$$ + "|" + WSP$$)) + "|" + OBS_QP$);
-//const QUOTED_STRING$ = subexp('\\"' + subexp(FWS$ + "?" + QCONTENT$) + "*" + FWS$ + "?" + '\\"');
-var ATEXT$$ = "[A-Za-z0-9\\!\\$\\%\\'\\*\\+\\-\\^\\_\\`\\{\\|\\}\\~]";
-var QTEXT$$ = "[\\!\\$\\%\\'\\(\\)\\*\\+\\,\\-\\.0-9\\<\\>A-Z\\x5E-\\x7E]";
-var VCHAR$$ = merge(QTEXT$$, "[\\\"\\\\]");
-var SOME_DELIMS$$ = "[\\!\\$\\'\\(\\)\\*\\+\\,\\;\\:\\@]";
-var UNRESERVED = new RegExp(UNRESERVED$$, "g");
-var PCT_ENCODED = new RegExp(PCT_ENCODED$, "g");
-var NOT_LOCAL_PART = new RegExp(merge("[^]", ATEXT$$, "[\\.]", '[\\"]', VCHAR$$), "g");
-var NOT_HFNAME = new RegExp(merge("[^]", UNRESERVED$$, SOME_DELIMS$$), "g");
-var NOT_HFVALUE = NOT_HFNAME;
-function decodeUnreserved(str) {
-    var decStr = pctDecChars(str);
-    return !decStr.match(UNRESERVED) ? str : decStr;
-}
-var handler$4 = {
-    scheme: "mailto",
-    parse: function parse$$1(components, options) {
-        var mailtoComponents = components;
-        var to = mailtoComponents.to = mailtoComponents.path ? mailtoComponents.path.split(",") : [];
-        mailtoComponents.path = undefined;
-        if (mailtoComponents.query) {
-            var unknownHeaders = false;
-            var headers = {};
-            var hfields = mailtoComponents.query.split("&");
-            for (var x = 0, xl = hfields.length; x < xl; ++x) {
-                var hfield = hfields[x].split("=");
-                switch (hfield[0]) {
-                    case "to":
-                        var toAddrs = hfield[1].split(",");
-                        for (var _x = 0, _xl = toAddrs.length; _x < _xl; ++_x) {
-                            to.push(toAddrs[_x]);
-                        }
-                        break;
-                    case "subject":
-                        mailtoComponents.subject = unescapeComponent(hfield[1], options);
-                        break;
-                    case "body":
-                        mailtoComponents.body = unescapeComponent(hfield[1], options);
-                        break;
-                    default:
-                        unknownHeaders = true;
-                        headers[unescapeComponent(hfield[0], options)] = unescapeComponent(hfield[1], options);
-                        break;
-                }
-            }
-            if (unknownHeaders) mailtoComponents.headers = headers;
-        }
-        mailtoComponents.query = undefined;
-        for (var _x2 = 0, _xl2 = to.length; _x2 < _xl2; ++_x2) {
-            var addr = to[_x2].split("@");
-            addr[0] = unescapeComponent(addr[0]);
-            if (!options.unicodeSupport) {
-                //convert Unicode IDN -> ASCII IDN
-                try {
-                    addr[1] = punycode.toASCII(unescapeComponent(addr[1], options).toLowerCase());
-                } catch (e) {
-                    mailtoComponents.error = mailtoComponents.error || "Email address's domain name can not be converted to ASCII via punycode: " + e;
-                }
-            } else {
-                addr[1] = unescapeComponent(addr[1], options).toLowerCase();
-            }
-            to[_x2] = addr.join("@");
-        }
-        return mailtoComponents;
-    },
-    serialize: function serialize$$1(mailtoComponents, options) {
-        var components = mailtoComponents;
-        var to = toArray(mailtoComponents.to);
-        if (to) {
-            for (var x = 0, xl = to.length; x < xl; ++x) {
-                var toAddr = String(to[x]);
-                var atIdx = toAddr.lastIndexOf("@");
-                var localPart = toAddr.slice(0, atIdx).replace(PCT_ENCODED, decodeUnreserved).replace(PCT_ENCODED, toUpperCase).replace(NOT_LOCAL_PART, pctEncChar);
-                var domain = toAddr.slice(atIdx + 1);
-                //convert IDN via punycode
-                try {
-                    domain = !options.iri ? punycode.toASCII(unescapeComponent(domain, options).toLowerCase()) : punycode.toUnicode(domain);
-                } catch (e) {
-                    components.error = components.error || "Email address's domain name can not be converted to " + (!options.iri ? "ASCII" : "Unicode") + " via punycode: " + e;
-                }
-                to[x] = localPart + "@" + domain;
-            }
-            components.path = to.join(",");
-        }
-        var headers = mailtoComponents.headers = mailtoComponents.headers || {};
-        if (mailtoComponents.subject) headers["subject"] = mailtoComponents.subject;
-        if (mailtoComponents.body) headers["body"] = mailtoComponents.body;
-        var fields = [];
-        for (var name in headers) {
-            if (headers[name] !== O[name]) {
-                fields.push(name.replace(PCT_ENCODED, decodeUnreserved).replace(PCT_ENCODED, toUpperCase).replace(NOT_HFNAME, pctEncChar) + "=" + headers[name].replace(PCT_ENCODED, decodeUnreserved).replace(PCT_ENCODED, toUpperCase).replace(NOT_HFVALUE, pctEncChar));
-            }
-        }
-        if (fields.length) {
-            components.query = fields.join("&");
-        }
-        return components;
-    }
-};
-
-var URN_PARSE = /^([^\:]+)\:(.*)/;
-//RFC 2141
-var handler$5 = {
-    scheme: "urn",
-    parse: function parse$$1(components, options) {
-        var matches = components.path && components.path.match(URN_PARSE);
-        var urnComponents = components;
-        if (matches) {
-            var scheme = options.scheme || urnComponents.scheme || "urn";
-            var nid = matches[1].toLowerCase();
-            var nss = matches[2];
-            var urnScheme = scheme + ":" + (options.nid || nid);
-            var schemeHandler = SCHEMES[urnScheme];
-            urnComponents.nid = nid;
-            urnComponents.nss = nss;
-            urnComponents.path = undefined;
-            if (schemeHandler) {
-                urnComponents = schemeHandler.parse(urnComponents, options);
-            }
-        } else {
-            urnComponents.error = urnComponents.error || "URN can not be parsed.";
-        }
-        return urnComponents;
-    },
-    serialize: function serialize$$1(urnComponents, options) {
-        var scheme = options.scheme || urnComponents.scheme || "urn";
-        var nid = urnComponents.nid;
-        var urnScheme = scheme + ":" + (options.nid || nid);
-        var schemeHandler = SCHEMES[urnScheme];
-        if (schemeHandler) {
-            urnComponents = schemeHandler.serialize(urnComponents, options);
-        }
-        var uriComponents = urnComponents;
-        var nss = urnComponents.nss;
-        uriComponents.path = (nid || options.nid) + ":" + nss;
-        return uriComponents;
-    }
-};
-
-var UUID = /^[0-9A-Fa-f]{8}(?:\-[0-9A-Fa-f]{4}){3}\-[0-9A-Fa-f]{12}$/;
-//RFC 4122
-var handler$6 = {
-    scheme: "urn:uuid",
-    parse: function parse(urnComponents, options) {
-        var uuidComponents = urnComponents;
-        uuidComponents.uuid = uuidComponents.nss;
-        uuidComponents.nss = undefined;
-        if (!options.tolerant && (!uuidComponents.uuid || !uuidComponents.uuid.match(UUID))) {
-            uuidComponents.error = uuidComponents.error || "UUID is not valid.";
-        }
-        return uuidComponents;
-    },
-    serialize: function serialize(uuidComponents, options) {
-        var urnComponents = uuidComponents;
-        //normalize UUID
-        urnComponents.nss = (uuidComponents.uuid || "").toLowerCase();
-        return urnComponents;
-    }
-};
-
-SCHEMES[handler.scheme] = handler;
-SCHEMES[handler$1.scheme] = handler$1;
-SCHEMES[handler$2.scheme] = handler$2;
-SCHEMES[handler$3.scheme] = handler$3;
-SCHEMES[handler$4.scheme] = handler$4;
-SCHEMES[handler$5.scheme] = handler$5;
-SCHEMES[handler$6.scheme] = handler$6;
-
-exports.SCHEMES = SCHEMES;
-exports.pctEncChar = pctEncChar;
-exports.pctDecChars = pctDecChars;
-exports.parse = parse;
-exports.removeDotSegments = removeDotSegments;
-exports.serialize = serialize;
-exports.resolveComponents = resolveComponents;
-exports.resolve = resolve;
-exports.normalize = normalize;
-exports.equal = equal;
-exports.escapeComponent = escapeComponent;
-exports.unescapeComponent = unescapeComponent;
-
-Object.defineProperty(exports, '__esModule', { value: true });
-
-})));
-//# sourceMappingURL=uri.all.js.map
-
-
-/***/ }),
-
 /***/ 5840:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -38739,6 +37291,803 @@ module.exports = parseParams
 
 /***/ }),
 
+/***/ 9688:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+
+
+const { normalizeIPv6, normalizeIPv4, removeDotSegments, recomposeAuthority, normalizeComponentEncoding } = __nccwpck_require__(6743)
+const SCHEMES = __nccwpck_require__(4923)
+
+function normalize (uri, options) {
+  if (typeof uri === 'string') {
+    uri = serialize(parse(uri, options), options)
+  } else if (typeof uri === 'object') {
+    uri = parse(serialize(uri, options), options)
+  }
+  return uri
+}
+
+function resolve (baseURI, relativeURI, options) {
+  const schemelessOptions = Object.assign({ scheme: 'null' }, options)
+  const resolved = resolveComponents(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true)
+  return serialize(resolved, { ...schemelessOptions, skipEscape: true })
+}
+
+function resolveComponents (base, relative, options, skipNormalization) {
+  const target = {}
+  if (!skipNormalization) {
+    base = parse(serialize(base, options), options) // normalize base components
+    relative = parse(serialize(relative, options), options) // normalize relative components
+  }
+  options = options || {}
+
+  if (!options.tolerant && relative.scheme) {
+    target.scheme = relative.scheme
+    // target.authority = relative.authority;
+    target.userinfo = relative.userinfo
+    target.host = relative.host
+    target.port = relative.port
+    target.path = removeDotSegments(relative.path || '')
+    target.query = relative.query
+  } else {
+    if (relative.userinfo !== undefined || relative.host !== undefined || relative.port !== undefined) {
+      // target.authority = relative.authority;
+      target.userinfo = relative.userinfo
+      target.host = relative.host
+      target.port = relative.port
+      target.path = removeDotSegments(relative.path || '')
+      target.query = relative.query
+    } else {
+      if (!relative.path) {
+        target.path = base.path
+        if (relative.query !== undefined) {
+          target.query = relative.query
+        } else {
+          target.query = base.query
+        }
+      } else {
+        if (relative.path.charAt(0) === '/') {
+          target.path = removeDotSegments(relative.path)
+        } else {
+          if ((base.userinfo !== undefined || base.host !== undefined || base.port !== undefined) && !base.path) {
+            target.path = '/' + relative.path
+          } else if (!base.path) {
+            target.path = relative.path
+          } else {
+            target.path = base.path.slice(0, base.path.lastIndexOf('/') + 1) + relative.path
+          }
+          target.path = removeDotSegments(target.path)
+        }
+        target.query = relative.query
+      }
+      // target.authority = base.authority;
+      target.userinfo = base.userinfo
+      target.host = base.host
+      target.port = base.port
+    }
+    target.scheme = base.scheme
+  }
+
+  target.fragment = relative.fragment
+
+  return target
+}
+
+function equal (uriA, uriB, options) {
+  if (typeof uriA === 'string') {
+    uriA = unescape(uriA)
+    uriA = serialize(normalizeComponentEncoding(parse(uriA, options), true), { ...options, skipEscape: true })
+  } else if (typeof uriA === 'object') {
+    uriA = serialize(normalizeComponentEncoding(uriA, true), { ...options, skipEscape: true })
+  }
+
+  if (typeof uriB === 'string') {
+    uriB = unescape(uriB)
+    uriB = serialize(normalizeComponentEncoding(parse(uriB, options), true), { ...options, skipEscape: true })
+  } else if (typeof uriB === 'object') {
+    uriB = serialize(normalizeComponentEncoding(uriB, true), { ...options, skipEscape: true })
+  }
+
+  return uriA.toLowerCase() === uriB.toLowerCase()
+}
+
+function serialize (cmpts, opts) {
+  const components = {
+    host: cmpts.host,
+    scheme: cmpts.scheme,
+    userinfo: cmpts.userinfo,
+    port: cmpts.port,
+    path: cmpts.path,
+    query: cmpts.query,
+    nid: cmpts.nid,
+    nss: cmpts.nss,
+    uuid: cmpts.uuid,
+    fragment: cmpts.fragment,
+    reference: cmpts.reference,
+    resourceName: cmpts.resourceName,
+    secure: cmpts.secure,
+    error: ''
+  }
+  const options = Object.assign({}, opts)
+  const uriTokens = []
+
+  // find scheme handler
+  const schemeHandler = SCHEMES[(options.scheme || components.scheme || '').toLowerCase()]
+
+  // perform scheme specific serialization
+  if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(components, options)
+
+  if (components.path !== undefined) {
+    if (!options.skipEscape) {
+      components.path = escape(components.path)
+
+      if (components.scheme !== undefined) {
+        components.path = components.path.split('%3A').join(':')
+      }
+    } else {
+      components.path = unescape(components.path)
+    }
+  }
+
+  if (options.reference !== 'suffix' && components.scheme) {
+    uriTokens.push(components.scheme)
+    uriTokens.push(':')
+  }
+
+  const authority = recomposeAuthority(components, options)
+  if (authority !== undefined) {
+    if (options.reference !== 'suffix') {
+      uriTokens.push('//')
+    }
+
+    uriTokens.push(authority)
+
+    if (components.path && components.path.charAt(0) !== '/') {
+      uriTokens.push('/')
+    }
+  }
+  if (components.path !== undefined) {
+    let s = components.path
+
+    if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
+      s = removeDotSegments(s)
+    }
+
+    if (authority === undefined) {
+      s = s.replace(/^\/\//u, '/%2F') // don't allow the path to start with "//"
+    }
+
+    uriTokens.push(s)
+  }
+
+  if (components.query !== undefined) {
+    uriTokens.push('?')
+    uriTokens.push(components.query)
+  }
+
+  if (components.fragment !== undefined) {
+    uriTokens.push('#')
+    uriTokens.push(components.fragment)
+  }
+  return uriTokens.join('')
+}
+
+const hexLookUp = Array.from({ length: 127 }, (v, k) => /[^!"$&'()*+,\-.;=_`a-z{}~]/u.test(String.fromCharCode(k)))
+
+function nonSimpleDomain (value) {
+  let code = 0
+  for (let i = 0, len = value.length; i < len; ++i) {
+    code = value.charCodeAt(i)
+    if (code > 126 || hexLookUp[code]) {
+      return true
+    }
+  }
+  return false
+}
+
+const URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u
+
+function parse (uri, opts) {
+  const options = Object.assign({}, opts)
+  const parsed = {
+    scheme: undefined,
+    userinfo: undefined,
+    host: '',
+    port: undefined,
+    path: '',
+    query: undefined,
+    fragment: undefined
+  }
+  const gotEncoding = uri.indexOf('%') !== -1
+  let isIP = false
+  if (options.reference === 'suffix') uri = (options.scheme ? options.scheme + ':' : '') + '//' + uri
+
+  const matches = uri.match(URI_PARSE)
+
+  if (matches) {
+    // store each component
+    parsed.scheme = matches[1]
+    parsed.userinfo = matches[3]
+    parsed.host = matches[4]
+    parsed.port = parseInt(matches[5], 10)
+    parsed.path = matches[6] || ''
+    parsed.query = matches[7]
+    parsed.fragment = matches[8]
+
+    // fix port number
+    if (isNaN(parsed.port)) {
+      parsed.port = matches[5]
+    }
+    if (parsed.host) {
+      const ipv4result = normalizeIPv4(parsed.host)
+      if (ipv4result.isIPV4 === false) {
+        const ipv6result = normalizeIPv6(ipv4result.host, { isIPV4: false })
+        parsed.host = ipv6result.host.toLowerCase()
+        isIP = ipv6result.isIPV6
+      } else {
+        parsed.host = ipv4result.host
+        isIP = true
+      }
+    }
+    if (parsed.scheme === undefined && parsed.userinfo === undefined && parsed.host === undefined && parsed.port === undefined && !parsed.path && parsed.query === undefined) {
+      parsed.reference = 'same-document'
+    } else if (parsed.scheme === undefined) {
+      parsed.reference = 'relative'
+    } else if (parsed.fragment === undefined) {
+      parsed.reference = 'absolute'
+    } else {
+      parsed.reference = 'uri'
+    }
+
+    // check for reference errors
+    if (options.reference && options.reference !== 'suffix' && options.reference !== parsed.reference) {
+      parsed.error = parsed.error || 'URI is not a ' + options.reference + ' reference.'
+    }
+
+    // find scheme handler
+    const schemeHandler = SCHEMES[(options.scheme || parsed.scheme || '').toLowerCase()]
+
+    // check if scheme can't handle IRIs
+    if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
+      // if host component is a domain name
+      if (parsed.host && (options.domainHost || (schemeHandler && schemeHandler.domainHost)) && isIP === false && nonSimpleDomain(parsed.host)) {
+        // convert Unicode IDN -> ASCII IDN
+        try {
+          parsed.host = URL.domainToASCII(parsed.host.toLowerCase())
+        } catch (e) {
+          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e
+        }
+      }
+      // convert IRI -> URI
+    }
+
+    if (!schemeHandler || (schemeHandler && !schemeHandler.skipNormalize)) {
+      if (gotEncoding && parsed.scheme !== undefined) {
+        parsed.scheme = unescape(parsed.scheme)
+      }
+      if (gotEncoding && parsed.userinfo !== undefined) {
+        parsed.userinfo = unescape(parsed.userinfo)
+      }
+      if (gotEncoding && parsed.host !== undefined) {
+        parsed.host = unescape(parsed.host)
+      }
+      if (parsed.path !== undefined && parsed.path.length) {
+        parsed.path = escape(unescape(parsed.path))
+      }
+      if (parsed.fragment !== undefined && parsed.fragment.length) {
+        parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment))
+      }
+    }
+
+    // perform scheme specific parsing
+    if (schemeHandler && schemeHandler.parse) {
+      schemeHandler.parse(parsed, options)
+    }
+  } else {
+    parsed.error = parsed.error || 'URI can not be parsed.'
+  }
+  return parsed
+}
+
+const fastUri = {
+  SCHEMES,
+  normalize,
+  resolve,
+  resolveComponents,
+  equal,
+  serialize,
+  parse
+}
+
+module.exports = fastUri
+module.exports["default"] = fastUri
+module.exports.fastUri = fastUri
+
+
+/***/ }),
+
+/***/ 4923:
+/***/ ((module) => {
+
+
+
+const UUID_REG = /^[\da-f]{8}\b-[\da-f]{4}\b-[\da-f]{4}\b-[\da-f]{4}\b-[\da-f]{12}$/iu
+const URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu
+
+function isSecure (wsComponents) {
+  return typeof wsComponents.secure === 'boolean' ? wsComponents.secure : String(wsComponents.scheme).toLowerCase() === 'wss'
+}
+
+function httpParse (components) {
+  if (!components.host) {
+    components.error = components.error || 'HTTP URIs must have a host.'
+  }
+
+  return components
+}
+
+function httpSerialize (components) {
+  const secure = String(components.scheme).toLowerCase() === 'https'
+
+  // normalize the default port
+  if (components.port === (secure ? 443 : 80) || components.port === '') {
+    components.port = undefined
+  }
+
+  // normalize the empty path
+  if (!components.path) {
+    components.path = '/'
+  }
+
+  // NOTE: We do not parse query strings for HTTP URIs
+  // as WWW Form Url Encoded query strings are part of the HTML4+ spec,
+  // and not the HTTP spec.
+
+  return components
+}
+
+function wsParse (wsComponents) {
+// indicate if the secure flag is set
+  wsComponents.secure = isSecure(wsComponents)
+
+  // construct resouce name
+  wsComponents.resourceName = (wsComponents.path || '/') + (wsComponents.query ? '?' + wsComponents.query : '')
+  wsComponents.path = undefined
+  wsComponents.query = undefined
+
+  return wsComponents
+}
+
+function wsSerialize (wsComponents) {
+// normalize the default port
+  if (wsComponents.port === (isSecure(wsComponents) ? 443 : 80) || wsComponents.port === '') {
+    wsComponents.port = undefined
+  }
+
+  // ensure scheme matches secure flag
+  if (typeof wsComponents.secure === 'boolean') {
+    wsComponents.scheme = (wsComponents.secure ? 'wss' : 'ws')
+    wsComponents.secure = undefined
+  }
+
+  // reconstruct path from resource name
+  if (wsComponents.resourceName) {
+    const [path, query] = wsComponents.resourceName.split('?')
+    wsComponents.path = (path && path !== '/' ? path : undefined)
+    wsComponents.query = query
+    wsComponents.resourceName = undefined
+  }
+
+  // forbid fragment component
+  wsComponents.fragment = undefined
+
+  return wsComponents
+}
+
+function urnParse (urnComponents, options) {
+  if (!urnComponents.path) {
+    urnComponents.error = 'URN can not be parsed'
+    return urnComponents
+  }
+  const matches = urnComponents.path.match(URN_REG)
+  if (matches) {
+    const scheme = options.scheme || urnComponents.scheme || 'urn'
+    urnComponents.nid = matches[1].toLowerCase()
+    urnComponents.nss = matches[2]
+    const urnScheme = `${scheme}:${options.nid || urnComponents.nid}`
+    const schemeHandler = SCHEMES[urnScheme]
+    urnComponents.path = undefined
+
+    if (schemeHandler) {
+      urnComponents = schemeHandler.parse(urnComponents, options)
+    }
+  } else {
+    urnComponents.error = urnComponents.error || 'URN can not be parsed.'
+  }
+
+  return urnComponents
+}
+
+function urnSerialize (urnComponents, options) {
+  const scheme = options.scheme || urnComponents.scheme || 'urn'
+  const nid = urnComponents.nid.toLowerCase()
+  const urnScheme = `${scheme}:${options.nid || nid}`
+  const schemeHandler = SCHEMES[urnScheme]
+
+  if (schemeHandler) {
+    urnComponents = schemeHandler.serialize(urnComponents, options)
+  }
+
+  const uriComponents = urnComponents
+  const nss = urnComponents.nss
+  uriComponents.path = `${nid || options.nid}:${nss}`
+
+  options.skipEscape = true
+  return uriComponents
+}
+
+function urnuuidParse (urnComponents, options) {
+  const uuidComponents = urnComponents
+  uuidComponents.uuid = uuidComponents.nss
+  uuidComponents.nss = undefined
+
+  if (!options.tolerant && (!uuidComponents.uuid || !UUID_REG.test(uuidComponents.uuid))) {
+    uuidComponents.error = uuidComponents.error || 'UUID is not valid.'
+  }
+
+  return uuidComponents
+}
+
+function urnuuidSerialize (uuidComponents) {
+  const urnComponents = uuidComponents
+  // normalize UUID
+  urnComponents.nss = (uuidComponents.uuid || '').toLowerCase()
+  return urnComponents
+}
+
+const http = {
+  scheme: 'http',
+  domainHost: true,
+  parse: httpParse,
+  serialize: httpSerialize
+}
+
+const https = {
+  scheme: 'https',
+  domainHost: http.domainHost,
+  parse: httpParse,
+  serialize: httpSerialize
+}
+
+const ws = {
+  scheme: 'ws',
+  domainHost: true,
+  parse: wsParse,
+  serialize: wsSerialize
+}
+
+const wss = {
+  scheme: 'wss',
+  domainHost: ws.domainHost,
+  parse: ws.parse,
+  serialize: ws.serialize
+}
+
+const urn = {
+  scheme: 'urn',
+  parse: urnParse,
+  serialize: urnSerialize,
+  skipNormalize: true
+}
+
+const urnuuid = {
+  scheme: 'urn:uuid',
+  parse: urnuuidParse,
+  serialize: urnuuidSerialize,
+  skipNormalize: true
+}
+
+const SCHEMES = {
+  http,
+  https,
+  ws,
+  wss,
+  urn,
+  'urn:uuid': urnuuid
+}
+
+module.exports = SCHEMES
+
+
+/***/ }),
+
+/***/ 3157:
+/***/ ((module) => {
+
+
+
+const HEX = {
+  0: 0,
+  1: 1,
+  2: 2,
+  3: 3,
+  4: 4,
+  5: 5,
+  6: 6,
+  7: 7,
+  8: 8,
+  9: 9,
+  a: 10,
+  A: 10,
+  b: 11,
+  B: 11,
+  c: 12,
+  C: 12,
+  d: 13,
+  D: 13,
+  e: 14,
+  E: 14,
+  f: 15,
+  F: 15
+}
+
+module.exports = {
+  HEX
+}
+
+
+/***/ }),
+
+/***/ 6743:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+
+
+const { HEX } = __nccwpck_require__(3157)
+
+function normalizeIPv4 (host) {
+  if (findToken(host, '.') < 3) { return { host, isIPV4: false } }
+  const matches = host.match(/^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/u) || []
+  const [address] = matches
+  if (address) {
+    return { host: stripLeadingZeros(address, '.'), isIPV4: true }
+  } else {
+    return { host, isIPV4: false }
+  }
+}
+
+/**
+ * @param {string[]} input
+ * @param {boolean} [keepZero=false]
+ * @returns {string|undefined}
+ */
+function stringArrayToHexStripped (input, keepZero = false) {
+  let acc = ''
+  let strip = true
+  for (const c of input) {
+    if (HEX[c] === undefined) return undefined
+    if (c !== '0' && strip === true) strip = false
+    if (!strip) acc += c
+  }
+  if (keepZero && acc.length === 0) acc = '0'
+  return acc
+}
+
+function getIPV6 (input) {
+  let tokenCount = 0
+  const output = { error: false, address: '', zone: '' }
+  const address = []
+  const buffer = []
+  let isZone = false
+  let endipv6Encountered = false
+  let endIpv6 = false
+
+  function consume () {
+    if (buffer.length) {
+      if (isZone === false) {
+        const hex = stringArrayToHexStripped(buffer)
+        if (hex !== undefined) {
+          address.push(hex)
+        } else {
+          output.error = true
+          return false
+        }
+      }
+      buffer.length = 0
+    }
+    return true
+  }
+
+  for (let i = 0; i < input.length; i++) {
+    const cursor = input[i]
+    if (cursor === '[' || cursor === ']') { continue }
+    if (cursor === ':') {
+      if (endipv6Encountered === true) {
+        endIpv6 = true
+      }
+      if (!consume()) { break }
+      tokenCount++
+      address.push(':')
+      if (tokenCount > 7) {
+        // not valid
+        output.error = true
+        break
+      }
+      if (i - 1 >= 0 && input[i - 1] === ':') {
+        endipv6Encountered = true
+      }
+      continue
+    } else if (cursor === '%') {
+      if (!consume()) { break }
+      // switch to zone detection
+      isZone = true
+    } else {
+      buffer.push(cursor)
+      continue
+    }
+  }
+  if (buffer.length) {
+    if (isZone) {
+      output.zone = buffer.join('')
+    } else if (endIpv6) {
+      address.push(buffer.join(''))
+    } else {
+      address.push(stringArrayToHexStripped(buffer))
+    }
+  }
+  output.address = address.join('')
+  return output
+}
+
+function normalizeIPv6 (host, opts = {}) {
+  if (findToken(host, ':') < 2) { return { host, isIPV6: false } }
+  const ipv6 = getIPV6(host)
+
+  if (!ipv6.error) {
+    let newHost = ipv6.address
+    let escapedHost = ipv6.address
+    if (ipv6.zone) {
+      newHost += '%' + ipv6.zone
+      escapedHost += '%25' + ipv6.zone
+    }
+    return { host: newHost, escapedHost, isIPV6: true }
+  } else {
+    return { host, isIPV6: false }
+  }
+}
+
+function stripLeadingZeros (str, token) {
+  let out = ''
+  let skip = true
+  const l = str.length
+  for (let i = 0; i < l; i++) {
+    const c = str[i]
+    if (c === '0' && skip) {
+      if ((i + 1 <= l && str[i + 1] === token) || i + 1 === l) {
+        out += c
+        skip = false
+      }
+    } else {
+      if (c === token) {
+        skip = true
+      } else {
+        skip = false
+      }
+      out += c
+    }
+  }
+  return out
+}
+
+function findToken (str, token) {
+  let ind = 0
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === token) ind++
+  }
+  return ind
+}
+
+const RDS1 = /^\.\.?\//u
+const RDS2 = /^\/\.(?:\/|$)/u
+const RDS3 = /^\/\.\.(?:\/|$)/u
+const RDS5 = /^\/?(?:.|\n)*?(?=\/|$)/u
+
+function removeDotSegments (input) {
+  const output = []
+
+  while (input.length) {
+    if (input.match(RDS1)) {
+      input = input.replace(RDS1, '')
+    } else if (input.match(RDS2)) {
+      input = input.replace(RDS2, '/')
+    } else if (input.match(RDS3)) {
+      input = input.replace(RDS3, '/')
+      output.pop()
+    } else if (input === '.' || input === '..') {
+      input = ''
+    } else {
+      const im = input.match(RDS5)
+      if (im) {
+        const s = im[0]
+        input = input.slice(s.length)
+        output.push(s)
+      } else {
+        throw new Error('Unexpected dot segment condition')
+      }
+    }
+  }
+  return output.join('')
+}
+
+function normalizeComponentEncoding (components, esc) {
+  const func = esc !== true ? escape : unescape
+  if (components.scheme !== undefined) {
+    components.scheme = func(components.scheme)
+  }
+  if (components.userinfo !== undefined) {
+    components.userinfo = func(components.userinfo)
+  }
+  if (components.host !== undefined) {
+    components.host = func(components.host)
+  }
+  if (components.path !== undefined) {
+    components.path = func(components.path)
+  }
+  if (components.query !== undefined) {
+    components.query = func(components.query)
+  }
+  if (components.fragment !== undefined) {
+    components.fragment = func(components.fragment)
+  }
+  return components
+}
+
+function recomposeAuthority (components, options) {
+  const uriTokens = []
+
+  if (components.userinfo !== undefined) {
+    uriTokens.push(components.userinfo)
+    uriTokens.push('@')
+  }
+
+  if (components.host !== undefined) {
+    let host = unescape(components.host)
+    const ipV4res = normalizeIPv4(host)
+
+    if (ipV4res.isIPV4) {
+      host = ipV4res.host
+    } else {
+      const ipV6res = normalizeIPv6(ipV4res.host, { isIPV4: false })
+      if (ipV6res.isIPV6 === true) {
+        host = `[${ipV6res.escapedHost}]`
+      } else {
+        host = components.host
+      }
+    }
+    uriTokens.push(host)
+  }
+
+  if (typeof components.port === 'number' || typeof components.port === 'string') {
+    uriTokens.push(':')
+    uriTokens.push(String(components.port))
+  }
+
+  return uriTokens.length ? uriTokens.join('') : undefined
+};
+
+module.exports = {
+  recomposeAuthority,
+  normalizeComponentEncoding,
+  removeDotSegments,
+  normalizeIPv4,
+  normalizeIPv6,
+  stringArrayToHexStripped
+}
+
+
+/***/ }),
+
 /***/ 8109:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -38769,10 +38118,23 @@ function resolveCollection(CN, ctx, token, onError, tagName, tag) {
         coll.tag = tagName;
     return coll;
 }
-function composeCollection(CN, ctx, token, tagToken, onError) {
+function composeCollection(CN, ctx, token, props, onError) {
+    const tagToken = props.tag;
     const tagName = !tagToken
         ? null
         : ctx.directives.tagName(tagToken.source, msg => onError(tagToken, 'TAG_RESOLVE_FAILED', msg));
+    if (token.type === 'block-seq') {
+        const { anchor, newlineAfterProp: nl } = props;
+        const lastProp = anchor && tagToken
+            ? anchor.offset > tagToken.offset
+                ? anchor
+                : tagToken
+            : (anchor ?? tagToken);
+        if (lastProp && (!nl || nl.offset < lastProp.offset)) {
+            const message = 'Missing newline after block sequence props';
+            onError(lastProp, 'MISSING_CHAR', message);
+        }
+    }
     const expType = token.type === 'block-map'
         ? 'map'
         : token.type === 'block-seq'
@@ -38786,8 +38148,7 @@ function composeCollection(CN, ctx, token, tagToken, onError) {
         !tagName ||
         tagName === '!' ||
         (tagName === YAMLMap.YAMLMap.tagName && expType === 'map') ||
-        (tagName === YAMLSeq.YAMLSeq.tagName && expType === 'seq') ||
-        !expType) {
+        (tagName === YAMLSeq.YAMLSeq.tagName && expType === 'seq')) {
         return resolveCollection(CN, ctx, token, onError, tagName);
     }
     let tag = ctx.schema.tags.find(t => t.tag === tagName && t.collection === expType);
@@ -38908,7 +38269,7 @@ function composeNode(ctx, token, props, onError) {
         case 'block-map':
         case 'block-seq':
         case 'flow-collection':
-            node = composeCollection.composeCollection(CN, ctx, token, tag, onError);
+            node = composeCollection.composeCollection(CN, ctx, token, props, onError);
             if (anchor)
                 node.anchor = anchor.source.substring(1);
             break;
@@ -39343,7 +38704,7 @@ function resolveBlockMap({ composeNode, composeEmptyNode }, ctx, bm, onError, ta
                 }
                 continue;
             }
-            if (keyProps.hasNewlineAfterProp || utilContainsNewline.containsNewline(key)) {
+            if (keyProps.newlineAfterProp || utilContainsNewline.containsNewline(key)) {
                 onError(key ?? start[start.length - 1], 'MULTILINE_IMPLICIT_KEY', 'Implicit keys need to be on a single line');
             }
         }
@@ -40179,11 +39540,11 @@ function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIn
     let comment = '';
     let commentSep = '';
     let hasNewline = false;
-    let hasNewlineAfterProp = false;
     let reqSpace = false;
     let tab = null;
     let anchor = null;
     let tag = null;
+    let newlineAfterProp = null;
     let comma = null;
     let found = null;
     let start = null;
@@ -40237,7 +39598,7 @@ function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIn
                 atNewline = true;
                 hasNewline = true;
                 if (anchor || tag)
-                    hasNewlineAfterProp = true;
+                    newlineAfterProp = token;
                 hasSpace = true;
                 break;
             case 'anchor':
@@ -40311,9 +39672,9 @@ function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIn
         spaceBefore,
         comment,
         hasNewline,
-        hasNewlineAfterProp,
         anchor,
         tag,
+        newlineAfterProp,
         end,
         start: start ?? end
     };
@@ -41638,7 +40999,6 @@ class Collection extends Node.NodeBase {
         }
     }
 }
-Collection.maxFlowStringSingleLineLength = 60;
 
 exports.Collection = Collection;
 exports.collectionFromPath = collectionFromPath;
@@ -43086,15 +42446,11 @@ class Lexer {
             if (!this.atEnd && !this.hasChars(4))
                 return this.setNext('line-start');
             const s = this.peek(3);
-            if (s === '---' && isEmpty(this.charAt(3))) {
+            if ((s === '---' || s === '...') && isEmpty(this.charAt(3))) {
                 yield* this.pushCount(3);
                 this.indentValue = 0;
                 this.indentNext = 0;
-                return 'doc';
-            }
-            else if (s === '...' && isEmpty(this.charAt(3))) {
-                yield* this.pushCount(3);
-                return 'stream';
+                return s === '---' ? 'doc' : 'stream';
             }
         }
         this.indentValue = yield* this.pushSpaces(false);
@@ -45815,6 +45171,8 @@ const FOLD_QUOTED = 'quoted';
 function foldFlowLines(text, indent, mode = 'flow', { indentAtStart, lineWidth = 80, minContentWidth = 20, onFold, onOverflow } = {}) {
     if (!lineWidth || lineWidth < 0)
         return text;
+    if (lineWidth < minContentWidth)
+        minContentWidth = 0;
     const endStep = Math.max(1 + minContentWidth, 1 + lineWidth - indent.length);
     if (text.length <= endStep)
         return text;
@@ -51397,7 +50755,7 @@ var ajv = __nccwpck_require__(2426);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
 var ajv_formats_dist = __nccwpck_require__(567);
 ;// CONCATENATED MODULE: ./node_modules/umbrel-cli/dist/lib.js
-async function a(e){const t=function(e){const t=e.matchAll(/\$(?:([a-zA-Z0-9_\-:]+)|\{([a-zA-Z0-9_\-:]+)\})/g);return[...t].map((e=>({fullVariable:e[0],variable:e[1]??e[2],mock:""})))}(e),i=function(e){for(const t of e)t.variable.includes("_IP")?t.mock="10.10.10.10":t.variable.includes("_PORT")?t.mock=Math.floor(64512*Math.random()+1024).toString():t.variable.includes("_PASS")?t.mock="password":t.variable.includes("_USER")?t.mock="username":t.variable.includes("_DIR")?t.mock="/path/to/dir":t.variable.includes("_PATH")?t.mock="/some/path":t.variable.includes("_SERVICE")?t.mock="service":t.variable.includes("_SEED")?t.mock="seed":t.variable.includes("_CONFIG")?t.mock="/path/to/config":t.variable.includes("_MODE")?t.mock="production":t.variable.includes("_NETWORK")?t.mock="network":t.variable.includes("_DOMAIN")?t.mock="domain.com":t.variable.includes("_NAME")?t.mock="name":t.variable.includes("_VERSION")?t.mock="1.0.0":t.variable.includes("_ROOT")?t.mock="/path/to/root":t.variable.includes("_KEY")?t.mock="key":t.variable.includes("_SECRET")?t.mock="secret":t.variable.includes("_TOKEN")?t.mock="token":t.variable.includes("_HOST")?t.mock="host":t.mock="mocked";return e}(t);return function(e,t){for(const i of t)e=e.replace(i.fullVariable,i.mock);return e}(e,i)}var p={$schema:"http://json-schema.org/draft-07/schema#",$id:"compose_spec.json",type:"object",title:"Compose Specification",description:"The Compose file is a YAML file defining a multi-containers based application.",properties:{version:{type:"string",description:"declared for backward compatibility, ignored."},name:{type:"string",pattern:"^[a-z0-9][a-z0-9_-]*$",description:"define the Compose project name, until user defines one explicitly."},include:{type:"array",items:{$ref:"#/definitions/include"},description:"compose sub-projects to be included."},services:{$id:"#/properties/services",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/service"}},additionalProperties:!1},networks:{$id:"#/properties/networks",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/network"}}},volumes:{$id:"#/properties/volumes",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/volume"}},additionalProperties:!1},secrets:{$id:"#/properties/secrets",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/secret"}},additionalProperties:!1},configs:{$id:"#/properties/configs",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/config"}},additionalProperties:!1}},patternProperties:{"^x-":{}},additionalProperties:!1,definitions:{service:{$id:"#/definitions/service",type:"object",properties:{develop:{$ref:"#/definitions/development"},deploy:{$ref:"#/definitions/deployment"},annotations:{$ref:"#/definitions/list_or_dict"},attach:{type:"boolean"},build:{oneOf:[{type:"string"},{type:"object",properties:{context:{type:"string"},dockerfile:{type:"string"},dockerfile_inline:{type:"string"},entitlements:{type:"array",items:{type:"string"}},args:{$ref:"#/definitions/list_or_dict"},ssh:{$ref:"#/definitions/list_or_dict"},labels:{$ref:"#/definitions/list_or_dict"},cache_from:{type:"array",items:{type:"string"}},cache_to:{type:"array",items:{type:"string"}},no_cache:{type:"boolean"},additional_contexts:{$ref:"#/definitions/list_or_dict"},network:{type:"string"},pull:{type:"boolean"},target:{type:"string"},shm_size:{type:["integer","string"]},extra_hosts:{$ref:"#/definitions/list_or_dict"},isolation:{type:"string"},privileged:{type:"boolean"},secrets:{$ref:"#/definitions/service_config_or_secret"},tags:{type:"array",items:{type:"string"}},ulimits:{$ref:"#/definitions/ulimits"},platforms:{type:"array",items:{type:"string"}}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},blkio_config:{type:"object",properties:{device_read_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_read_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},weight:{type:"integer"},weight_device:{type:"array",items:{$ref:"#/definitions/blkio_weight"}}},additionalProperties:!1},cap_add:{type:"array",items:{type:"string"},uniqueItems:!0},cap_drop:{type:"array",items:{type:"string"},uniqueItems:!0},cgroup:{type:"string",enum:["host","private"]},cgroup_parent:{type:"string"},command:{$ref:"#/definitions/command"},configs:{$ref:"#/definitions/service_config_or_secret"},container_name:{type:"string"},cpu_count:{type:"integer",minimum:0},cpu_percent:{type:"integer",minimum:0,maximum:100},cpu_shares:{type:["number","string"]},cpu_quota:{type:["number","string"]},cpu_period:{type:["number","string"]},cpu_rt_period:{type:["number","string"]},cpu_rt_runtime:{type:["number","string"]},cpus:{type:["number","string"]},cpuset:{type:"string"},credential_spec:{type:"object",properties:{config:{type:"string"},file:{type:"string"},registry:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},depends_on:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",additionalProperties:!1,patternProperties:{"^[a-zA-Z0-9._-]+$":{type:"object",additionalProperties:!1,properties:{restart:{type:"boolean"},required:{type:"boolean",default:!0},condition:{type:"string",enum:["service_started","service_healthy","service_completed_successfully"]}},required:["condition"]}}}]},device_cgroup_rules:{$ref:"#/definitions/list_of_strings"},devices:{type:"array",items:{type:"string"},uniqueItems:!0},dns:{$ref:"#/definitions/string_or_list"},dns_opt:{type:"array",items:{type:"string"},uniqueItems:!0},dns_search:{$ref:"#/definitions/string_or_list"},domainname:{type:"string"},entrypoint:{$ref:"#/definitions/command"},env_file:{$ref:"#/definitions/env_file"},environment:{$ref:"#/definitions/list_or_dict"},expose:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^\\d{1,5}(-\\d{1,5})?(/(tcp|udp))?$"}]},uniqueItems:!0},extends:{oneOf:[{type:"string"},{type:"object",properties:{service:{type:"string"},file:{type:"string"}},required:["service"],additionalProperties:!1}]},external_links:{type:"array",items:{type:"string"},uniqueItems:!0},extra_hosts:{$ref:"#/definitions/list_or_dict"},group_add:{type:"array",items:{type:["string","number"]},uniqueItems:!0},healthcheck:{$ref:"#/definitions/healthcheck"},hostname:{type:"string"},image:{type:"string"},init:{type:"boolean"},ipc:{type:"string"},isolation:{type:"string"},labels:{$ref:"#/definitions/list_or_dict"},links:{type:"array",items:{type:"string"},uniqueItems:!0},logging:{type:"object",properties:{driver:{type:"string"},options:{type:"object",patternProperties:{"^.+$":{type:["string","number","null"]}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},mac_address:{type:"string"},mem_limit:{type:["number","string"]},mem_reservation:{type:["string","integer"]},mem_swappiness:{type:"integer"},memswap_limit:{type:["number","string"]},network_mode:{type:"string"},networks:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{oneOf:[{type:"object",properties:{aliases:{$ref:"#/definitions/list_of_strings"},ipv4_address:{type:"string",format:"ipv4"},ipv6_address:{type:"string",format:"ipv6"},link_local_ips:{$ref:"#/definitions/list_of_strings"},mac_address:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},priority:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"null"}]}},additionalProperties:!1}]},oom_kill_disable:{type:"boolean"},oom_score_adj:{type:"integer",minimum:-1e3,maximum:1e3},pid:{type:["string","null"]},pids_limit:{type:["number","string"]},platform:{type:"string"},ports:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^((\\d+((\\.\\d+)+|(-\\d+))*):?){1,3}(/(tcp|udp))?$"},{type:"object",properties:{name:{type:"string",description:"A human-readable name for the port, used to document it's usage within the service"},mode:{type:"string",pattern:"^ingress|host$",description:"host: For publishing a host port on each node, or ingress: for a port to be load balanced. Defaults to ingress."},host_ip:{type:"string",format:"ipv4",description:"The Host IP mapping, unspecified means all network interfaces (0.0.0.0)"},target:{$ref:"#/definitions/port_format",description:"The container port"},published:{anyOf:[{$ref:"#/definitions/port_format"},{$ref:"#/definitions/port_published_format"}],description:"The publicly exposed port. It is defined as a string and can be set as a range using syntax start-end. It means the actual port is assigned a remaining available port, within the set range."},protocol:{type:"string",pattern:"^tcp|udp$",description:"The port protocol (tcp or udp). Defaults to tcp"},app_protocol:{type:"string",description:"The application protocol (TCP/IP level 4 / OSI level 7) this port is used for. This is optional and can be used as a hint for Compose to offer richer behavior for protocols that it understands"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},uniqueItems:!0},privileged:{type:"boolean"},profiles:{$ref:"#/definitions/list_of_strings"},pull_policy:{type:"string",enum:["always","never","if_not_present","build","missing"]},read_only:{type:"boolean"},restart:{type:"string"},runtime:{type:"string"},scale:{type:"integer"},security_opt:{type:"array",items:{type:"string"},uniqueItems:!0},shm_size:{type:["number","string"]},secrets:{$ref:"#/definitions/service_config_or_secret"},sysctls:{$ref:"#/definitions/list_or_dict"},stdin_open:{type:"boolean"},stop_grace_period:{$ref:"#/definitions/duration_format"},stop_signal:{type:"string"},storage_opt:{type:"object"},tmpfs:{$ref:"#/definitions/string_or_list"},tty:{type:"boolean"},ulimits:{$ref:"#/definitions/ulimits"},user:{type:"string"},uts:{type:"string"},userns_mode:{type:"string"},volumes:{type:"array",items:{oneOf:[{type:"object",required:["type"],properties:{type:{type:"string"},source:{type:"string"},target:{type:"string"},read_only:{type:"boolean"},consistency:{type:"string"},bind:{type:"object",properties:{propagation:{type:"string"},create_host_path:{type:"boolean"},selinux:{type:"string",enum:["z","Z"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{type:"object",properties:{nocopy:{type:"boolean"},subpath:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},tmpfs:{type:"object",properties:{size:{oneOf:[{type:"integer",minimum:0},{type:"string"}]},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"string"}]},uniqueItems:!0},volumes_from:{type:"array",items:{type:"string"},uniqueItems:!0},working_dir:{type:"string"}},patternProperties:{"^x-":{}},additionalProperties:!1},healthcheck:{$id:"#/definitions/healthcheck",type:"object",properties:{disable:{type:"boolean"},interval:{$ref:"#/definitions/duration_format"},retries:{type:"number"},test:{oneOf:[{type:"string"},{type:"array",items:{type:"string"}}]},timeout:{$ref:"#/definitions/duration_format"},start_period:{$ref:"#/definitions/duration_format"},start_interval:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},development:{$id:"#/definitions/development",type:["object","null"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{watch:{type:"array",minItems:1,items:{type:"object",required:["path","action"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{path:{type:"string"},action:{type:"string",enum:["rebuild","sync","sync+restart"]},ignore:{type:"array",items:{type:"string"}},target:{type:"string"}}}}}},deployment:{$id:"#/definitions/deployment",type:["object","null"],properties:{mode:{type:"string"},endpoint_mode:{type:"string"},replicas:{type:"integer"},labels:{$ref:"#/definitions/list_or_dict"},rollback_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},update_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},resources:{type:"object",properties:{limits:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},pids:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}},reservations:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},generic_resources:{$ref:"#/definitions/generic_resources"},devices:{$ref:"#/definitions/devices"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},restart_policy:{type:"object",properties:{condition:{type:"string"},delay:{$ref:"#/definitions/duration_format"},max_attempts:{type:"integer"},window:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},placement:{type:"object",properties:{constraints:{type:"array",items:{type:"string"}},preferences:{type:"array",items:{type:"object",properties:{spread:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},max_replicas_per_node:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},patternProperties:{"^x-":{}},additionalProperties:!1},generic_resources:{$id:"#/definitions/generic_resources",type:"array",items:{type:"object",properties:{discrete_resource_spec:{type:"object",properties:{kind:{type:"string"},value:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},devices:{$id:"#/definitions/devices",type:"array",items:{type:"object",properties:{capabilities:{$ref:"#/definitions/list_of_strings"},count:{anyOf:[{type:"string"},{type:"integer"}]},device_ids:{$ref:"#/definitions/list_of_strings"},driver:{type:"string"},options:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},include:{$id:"#/definitions/include",oneOf:[{type:"string"},{type:"object",properties:{path:{$ref:"#/definitions/string_or_list"},env_file:{$ref:"#/definitions/string_or_list"},project_directory:{type:"string"}},additionalProperties:!1}]},network:{$id:"#/definitions/network",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},ipam:{type:"object",properties:{driver:{type:"string"},config:{type:"array",items:{type:"object",properties:{subnet:{anyOf:[{$ref:"#/definitions/ipv4_subnet_format"},{$ref:"#/definitions/ipv6_subnet_format"}]},ip_range:{type:"string"},gateway:{type:"string"},aux_addresses:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},options:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},internal:{type:"boolean"},enable_ipv6:{type:"boolean"},attachable:{type:"boolean"},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{$id:"#/definitions/volume",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},secret:{$id:"#/definitions/secret",type:"object",properties:{name:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},config:{$id:"#/definitions/config",type:"object",properties:{name:{type:"string"},content:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},command:{oneOf:[{type:"null"},{type:"string"},{type:"array",items:{type:"string"}}]},env_file:{oneOf:[{type:"string"},{type:"array",items:{oneOf:[{type:"string"},{type:"object",additionalProperties:!1,properties:{path:{type:"string"},required:{type:"boolean",default:!0}},required:["path"]}]}}]},string_or_list:{oneOf:[{type:"string"},{$ref:"#/definitions/list_of_strings"}]},list_of_strings:{type:"array",items:{type:"string"},uniqueItems:!0},duration_format:{type:"string",pattern:"^([0-9]+h)?([0-9]+m)?([0-9]+s)?([0-9]+ms)?([0-9]+us)?([0-9]+ns)?$"},expose_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?(/tcp|udp)?$"},port_published_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?$"},port_format:{type:"integer",minimum:0,maximum:65535},ipv6_subnet_format:{type:"string",pattern:"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))/(?:\\d|[12]\\d|3[01])"},ipv4_subnet_format:{type:"string",pattern:"((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}/(?:\\d|[12]\\d|3[01])"},list_or_dict:{oneOf:[{type:"object",patternProperties:{".+":{type:["string","number","boolean","null"]}},additionalProperties:!1},{type:"array",items:{type:"string"},uniqueItems:!0}]},blkio_limit:{type:"object",properties:{path:{type:"string"},rate:{type:["integer","string"]}},additionalProperties:!1},blkio_weight:{type:"object",properties:{path:{type:"string"},weight:{type:"integer"}},additionalProperties:!1},service_config_or_secret:{type:"array",items:{oneOf:[{type:"string"},{type:"object",properties:{source:{type:"string"},target:{type:"string"},uid:{type:"string"},gid:{type:"string"},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]}},ulimits:{type:"object",patternProperties:{"^[a-z]+$":{oneOf:[{type:"integer"},{type:"object",properties:{hard:{type:"integer"},soft:{type:"integer"}},required:["soft","hard"],additionalProperties:!1,patternProperties:{"^x-":{}}}]}}},constraints:{service:{$id:"#/definitions/constraints/service",anyOf:[{required:["build"]},{required:["image"]}],properties:{build:{required:["context"]}}}}}};async function l(){return z.object({manifestVersion:z.number().refine((e=>1===e||1.1===e),{message:"The manifest version can either be '1' or '1.1'"}),id:z.string().refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the app repository"}),disabled:z.boolean().optional(),name:z.string().min(1).max(50),tagline:z.string().min(1).max(100).refine((async e=>!(e.endsWith(".")&&2===e.split(".").length)),{message:"Taglines should not end with a period"}),icon:z.string().optional(),category:z["enum"](["files","bitcoin","media","networking","social","automation","finance","ai","developer"]),version:z.string().min(1),port:z.number().min(0).max(65535),description:z.string().min(1).max(5e3),developer:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),website:z.string().url(),submitter:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),submission:z.string().url(),repo:z.string().url().or(z.literal("")),support:z.string().url(),gallery:z.string().array(),releaseNotes:z.string().min(0).max(5e3),dependencies:z.string().array(),permissions:z["enum"](["STORAGE_DOWNLOADS"]).array().optional(),path:z.string().refine((e=>function(e){try{return new URL(e),!0}catch(e){return!1}}(`https://example.com${e}`))),defaultUsername:z.string().optional().or(z.literal("")),defaultPassword:z.string().optional().or(z.literal("")),deterministicPassword:z.boolean().optional(),optimizedForUmbrelHome:z.boolean().optional(),torOnly:z.boolean().optional(),installSize:z.number().min(0).optional(),widgets:z.any().array().optional(),defaultShell:z.string().optional()}).refine((e=>!e.dependencies?.includes(e.id)),{message:"Dependencies can't include its own app id"})}function c(e,t){const s=new dist.LineCounter,n=new dist.Parser(s.addNewLine),[o]=n.parse(e);return function e(t,i){switch(t.type){case"document":return e(t.value,i);case"block-map":for(const r of t.items)if(r.key&&"source"in r.key&&r.key.source===i[0]){if(1===i.length){const e=s.linePos(r.key.offset);if(r.value&&"end"in r.value&&r.value.end&&r.value.end[0]){const t=s.linePos(r.value.offset),i=s.linePos(r.value.end[0].offset);return e.line===i.line?{line:{start:e.line,end:e.line},column:{start:t.col,end:i.col}}:{line:{start:e.line,end:i.line}}}return{line:{start:e.line,end:e.line}}}return r.value?(i.splice(0,1),e(r.value,i)):void 0}break;case"block-seq":{const r=parseInt(String(i[0]));if(isNaN(r))return;if(r<0||r>=t.items.length)return;const n=t.items[r];if(!n||!n.value)return;if(1===i.length){const e=s.linePos(n.value.offset);if("end"in n.value&&n.value.end&&n.value.end[0]){const t=s.linePos(n.value.end[0].offset);return e.line===t.line?{line:{start:e.line,end:e.line},column:{start:e.col,end:t.col}}:{line:{start:e.line,end:t.line}}}return{line:{start:e.line,end:e.line}}}if(n.value)return i.splice(0,1),e(n.value,i);break}}}(o,t)}const d=new Map;async function m(e){const t=d.get(e.APIHost);if(t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);const i=await fetch(`https://${e.APIHost}/v2/`,{signal:t.signal});if(!("registry/2.0"===i.headers.get("Docker-Distribution-Api-Version")))throw new Error(`"${e.APIHost}" is not a valid CNCF distribution registry`);let r;if(401===i.status){const e=i.headers.get("Www-Authenticate");if(!e)throw new Error(`Missing auth header for "${i.url}"`);r=function(e){if(!e.startsWith("Bearer"))throw new Error(`Only Bearer token authorization is supported: ${e}`);const t=e.match(/realm="(.*?)"/)?.[1];if(!t)throw new Error(`Failed to get realm from auth header: ${e}`);const i=e.match(/service="(.*?)"/)?.[1];if(!i)throw new Error(`Failed to get service from auth header: ${e}`);const r=e.match(/scope="(.*?)"/)?.[1];return{realm:t,service:i,scope:r}}(e)}const s={host:e.APIHost,auth:r};return d.set(e.APIHost,s),s}catch(t){throw d.set(e.APIHost,!1),t}}async function y(e,t,i){const r=await async function(e){const t=await m(e);if(!t.auth)return;const i=new URL(t.auth.realm);i.searchParams.set("service",t.auth.service),i.searchParams.set("scope",`repository:${e.APIPath}:pull`);const r=await fetch(i);return(await r.json()).token}(e),s=new Headers(i?.headers);return r&&s.append("Authorization",`Bearer ${r}`),fetch(t,{...i,headers:s})}async function f(e){const t=await async function(e){const t=new Headers;t.append("Accept","application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json");const i=await y(e,`https://${e.APIHost}/v2/${e.APIPath}/manifests/${e.digest?encodeURIComponent(e.digest):e.tag}`,{headers:t});if(!i.ok)throw new Error(`HTTP ${i.status} for ${e.toString()}: ${await i.text()}`);const r=await i.json(),s=i.headers.get("Content-Type");switch(s){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return r;default:throw new Error(`Unsupported content type: ${s}`)}}(e);switch(t.mediaType){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":return[];case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return t.manifests.map((e=>({os:e.platform.os,architecture:e.platform.architecture,variant:e.platform.variant})))}}class u{#e;#t;#i;#r;constructor({host:e,path:t,tag:i,digest:r}){this.#e=e,this.#t=t,this.#i=i,this.#r=r}static#s(e){return"docker.io"===e?"registry.hub.docker.com":e}static async fromString(e){const t=/^(?<path>[a-z0-9_.:-]+?(?:\/[a-z0-9_.-]+)*)(?::(?<tag>[a-zA-Z0-9_.-]+))?(?!.*(?<!.*@.*):)(?:@(?<digest>[a-z0-9]+:[0-9a-f]{64}))?$/m.exec(e);if(!t||!t.groups)throw new Error(`Invalid image format: ${e}`);let i=t.groups.path;const{tag:r,digest:s}=t.groups,n=i.split("/");if(1===n.length)return new u({host:void 0,path:i,tag:r,digest:s});let o;return await u.isRegistry(n[0])&&(o=n[0],i=n.slice(1).join("/")),new u({host:o,path:i,tag:r,digest:s})}static#n=new Map;static async isRegistry(e){e=u.#s(e);const t=u.#n.get(e);if("boolean"==typeof t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);return"registry/2.0"===(await fetch(`https://${e}/v2/`,{signal:t.signal})).headers.get("Docker-Distribution-Api-Version")}catch(t){return u.#n.set(e,!1),!1}}get host(){return this.#e||"docker.io"}get APIHost(){return u.#s(this.host)}get path(){return this.#t}get APIPath(){const e=this.path;return e.includes("/")?e:`library/${this.#t}`}get tag(){return this.#i||"latest"}get digest(){return this.#r}toString(){let e=this.#t;return this.#e&&(e=`${this.#e}/${e}`),this.#i&&(e=`${e}:${this.#i}`),this.#r&&(e=`${e}@${this.#r}`),e}async toFullString(){return`${this.host}/${this.path}:${this.tag}${this.digest?`@${this.digest}`:""}`}}async function g(e){let i;try{i=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app-store.yml is not a valid YAML file",message:String(e),file:"umbrel-app-store.yml"}]}const r=await async function(){return z.object({id:z.string().min(1).max(50).refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the official Umbrel App Store."}).refine((e=>/^[a-z]+(?:-[a-z]+)*$/.test(e)),{message:"The id of the app should contain only alphabets ('a' to 'z') and dashes ('-')."}),name:z.string().min(1).max(50)})}(),n=await r.safeParseAsync(i);return n.success?[]:n.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:"umbrel-app-store.yml"})))}async function h(e,i,r={}){let s;try{s=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app.yml is not a valid YAML file",message:String(e),file:`${i}/umbrel-app.yml`}]}const n=await l(),o=await n.safeParseAsync(s);let a=[];return o.success||(a=o.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:`${i}/umbrel-app.yml`})))),r.isNewAppSubmission&&r.pullRequestUrl&&s.submission!==r.pullRequestUrl&&a.push({id:"invalid_submission_field",severity:"error",title:`Invalid submission field "${s.submission}"`,message:`The submission field must be set to the URL of this pull request: ${r.pullRequestUrl}`,file:`${i}/umbrel-app.yml`}),a}async function _(i,r,s,l={}){const d=await a(i);let m;try{m=dist.parse(d,{merge:!0})}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"docker-compose.yml is not a valid YAML file",message:String(e),file:`${r}/docker-compose.yml`}]}const y=new ajv({allowUnionTypes:!0});ajv_formats_dist(y);const g=y.compile(p);if(!g(m))return(g.errors??[]).map((t=>({id:t.keyword,propertiesPath:external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean).join("."),...c(i,external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean)),severity:"error",title:t.instancePath,message:t.message??"Unknown error",file:`${r}/docker-compose.yml`})));const h=[],_=Object.keys(m.services??{});for(const e of _){const t=m.services?.[e].image;if(!t)continue;const s=t.match(/^(.+):(.+)@(.+)$/);if(s){const[,t]=s.slice(1);"latest"===t&&h.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"warning",title:`Invalid image tag "${t}"`,message:'Images should not use the "latest" tag',file:`${r}/docker-compose.yml`})}else h.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${t}"`,message:'Images should be named like "<name>:<version-tag>@<sha256>"',file:`${r}/docker-compose.yml`})}for(const e of _){const t=m.services?.[e].environment,s=m.services?.[e].labels,n=m.services?.[e].extra_hosts,o=[];t&&"object"==typeof t&&o.push({label:"environment",entries:Object.entries(t)}),s&&"object"==typeof s&&o.push({label:"labels",entries:Object.entries(s)}),n&&"object"==typeof n&&o.push({label:"extra_hosts",entries:Object.entries(n)});for(const t of o)for(const[s,n]of t.entries)"boolean"==typeof n&&h.push({id:"invalid_yaml_boolean_value",propertiesPath:`services.${e}.${t.label}.${s}`,...c(i,["services",e,t.label,s]),severity:"error",title:`Invalid YAML boolean value for key "${s}"`,message:`Boolean values should be strings like "${n}" instead of ${n}`,file:`${r}/docker-compose.yml`})}let b;try{b=dist.parse(i,{merge:!0})}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"docker-compose.yml is not a valid YAML file",message:String(e),file:`${r}/docker-compose.yml`}]}const v=Object.keys(b.services??{});for(const e of v){const t=b.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s?s.match(/\$\{?APP_DATA_DIR\}?\/?:/)&&h.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "\${APP_DATA_DIR}/data${s.split(":")[1]??""}" instead.`,file:`${r}/docker-compose.yml`}):"object"==typeof s&&"source"in s&&"target"in s&&s.source.match(/\$\{?APP_DATA_DIR\}?\/?$/)&&h.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s.source}:${s.target}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "source: \${APP_DATA_DIR}/data" and "target: ${s.target??"/some/dir"}" instead.`,file:`${r}/docker-compose.yml`})}for(const e of v){const t=b.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const n of t)if("string"==typeof n){if(n.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.match(/\$\{?APP_DATA_DIR\}?\/?(.*?):/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||h.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}else if("object"==typeof n&&"source"in n&&"target"in n&&n.source.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.source.match(/\$\{?APP_DATA_DIR\}?\/?(.*?)$/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||h.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n.source}:${n.target}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}for(const e of v){const t=b.services?.[e].ports;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s||"number"==typeof s?h.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s}"`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`}):"object"==typeof s&&"target"in s&&h.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s.target}${s.published?`:${s.published}`:""}`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`})}if(l.checkImageArchitectures)for(const e of v){const t=b.services?.[e].image;if(!t)continue;let s;try{s=await u.fromString(t)}catch(e){h.push({id:"invalid_docker_image_name",severity:"error",title:"Invalid image name",message:String(e),file:`${r}/docker-compose.yml`});continue}try{const t=await f(s);t.find((e=>"linux"===e.os&&"arm64"===e.architecture))&&t.find((e=>"linux"===e.os&&"amd64"===e.architecture))||h.push({id:"invalid_image_architectures",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image architectures for image "${s}"`,message:`The image "${s}" does not support the architectures "arm64" and "amd64". Please make sure that the image supports both architectures.`,file:`${r}/docker-compose.yml`})}catch(t){h.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${s}"`,message:String(t),file:`${r}/docker-compose.yml`})}}return h}function b(e){const t=e.filter((e=>"directory"===e.type)).filter((t=>!e.some((e=>e.path.length>t.path.length&&e.path.startsWith(t.path))))),i=[];for(const e of t)i.push({id:"empty_app_data_directory",severity:"error",title:`Empty directory "${e.path}"`,message:`Please add a ".gitkeep" file to the directory "${e.path}". This is necessary to ensure the correct permissions of the directory after cloning!`,file:e.path});return i}z.setErrorMap(((e,t)=>e.code===z.ZodIssueCode.invalid_type&&"undefined"===e.received?{message:`The "${e.path.join(".")}" key is required`}:{message:t.defaultError}));
+async function a(e){const t=function(e){const t=e.matchAll(/\$(?:([a-zA-Z0-9_\-:]+)|\{([a-zA-Z0-9_\-:]+)\})/g);return[...t].map((e=>({fullVariable:e[0],variable:e[1]??e[2],mock:""})))}(e),i=function(e){for(const t of e)t.variable.includes("_IP")?t.mock="10.10.10.10":t.variable.includes("_PORT")?t.mock=Math.floor(64512*Math.random()+1024).toString():t.variable.includes("_PASS")?t.mock="password":t.variable.includes("_USER")?t.mock="username":t.variable.includes("_DIR")?t.mock="/path/to/dir":t.variable.includes("_PATH")?t.mock="/some/path":t.variable.includes("_SERVICE")?t.mock="service":t.variable.includes("_SEED")?t.mock="seed":t.variable.includes("_CONFIG")?t.mock="/path/to/config":t.variable.includes("_MODE")?t.mock="production":t.variable.includes("_NETWORK")?t.mock="network":t.variable.includes("_DOMAIN")?t.mock="domain.com":t.variable.includes("_NAME")?t.mock="name":t.variable.includes("_VERSION")?t.mock="1.0.0":t.variable.includes("_ROOT")?t.mock="/path/to/root":t.variable.includes("_KEY")?t.mock="key":t.variable.includes("_SECRET")?t.mock="secret":t.variable.includes("_TOKEN")?t.mock="token":t.variable.includes("_HOST")?t.mock="host":t.mock="mocked";return e}(t);return function(e,t){for(const i of t)e=e.replace(i.fullVariable,i.mock);return e}(e,i)}var p={$schema:"http://json-schema.org/draft-07/schema#",$id:"compose_spec.json",type:"object",title:"Compose Specification",description:"The Compose file is a YAML file defining a multi-containers based application.",properties:{version:{type:"string",description:"declared for backward compatibility, ignored."},name:{type:"string",pattern:"^[a-z0-9][a-z0-9_-]*$",description:"define the Compose project name, until user defines one explicitly."},include:{type:"array",items:{$ref:"#/definitions/include"},description:"compose sub-projects to be included."},services:{$id:"#/properties/services",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/service"}},additionalProperties:!1},networks:{$id:"#/properties/networks",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/network"}}},volumes:{$id:"#/properties/volumes",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/volume"}},additionalProperties:!1},secrets:{$id:"#/properties/secrets",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/secret"}},additionalProperties:!1},configs:{$id:"#/properties/configs",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/config"}},additionalProperties:!1}},patternProperties:{"^x-":{}},additionalProperties:!1,definitions:{service:{$id:"#/definitions/service",type:"object",properties:{develop:{$ref:"#/definitions/development"},deploy:{$ref:"#/definitions/deployment"},annotations:{$ref:"#/definitions/list_or_dict"},attach:{type:"boolean"},build:{oneOf:[{type:"string"},{type:"object",properties:{context:{type:"string"},dockerfile:{type:"string"},dockerfile_inline:{type:"string"},entitlements:{type:"array",items:{type:"string"}},args:{$ref:"#/definitions/list_or_dict"},ssh:{$ref:"#/definitions/list_or_dict"},labels:{$ref:"#/definitions/list_or_dict"},cache_from:{type:"array",items:{type:"string"}},cache_to:{type:"array",items:{type:"string"}},no_cache:{type:"boolean"},additional_contexts:{$ref:"#/definitions/list_or_dict"},network:{type:"string"},pull:{type:"boolean"},target:{type:"string"},shm_size:{type:["integer","string"]},extra_hosts:{$ref:"#/definitions/list_or_dict"},isolation:{type:"string"},privileged:{type:"boolean"},secrets:{$ref:"#/definitions/service_config_or_secret"},tags:{type:"array",items:{type:"string"}},ulimits:{$ref:"#/definitions/ulimits"},platforms:{type:"array",items:{type:"string"}}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},blkio_config:{type:"object",properties:{device_read_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_read_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},weight:{type:"integer"},weight_device:{type:"array",items:{$ref:"#/definitions/blkio_weight"}}},additionalProperties:!1},cap_add:{type:"array",items:{type:"string"},uniqueItems:!0},cap_drop:{type:"array",items:{type:"string"},uniqueItems:!0},cgroup:{type:"string",enum:["host","private"]},cgroup_parent:{type:"string"},command:{$ref:"#/definitions/command"},configs:{$ref:"#/definitions/service_config_or_secret"},container_name:{type:"string"},cpu_count:{type:"integer",minimum:0},cpu_percent:{type:"integer",minimum:0,maximum:100},cpu_shares:{type:["number","string"]},cpu_quota:{type:["number","string"]},cpu_period:{type:["number","string"]},cpu_rt_period:{type:["number","string"]},cpu_rt_runtime:{type:["number","string"]},cpus:{type:["number","string"]},cpuset:{type:"string"},credential_spec:{type:"object",properties:{config:{type:"string"},file:{type:"string"},registry:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},depends_on:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",additionalProperties:!1,patternProperties:{"^[a-zA-Z0-9._-]+$":{type:"object",additionalProperties:!1,properties:{restart:{type:"boolean"},required:{type:"boolean",default:!0},condition:{type:"string",enum:["service_started","service_healthy","service_completed_successfully"]}},required:["condition"]}}}]},device_cgroup_rules:{$ref:"#/definitions/list_of_strings"},devices:{type:"array",items:{type:"string"},uniqueItems:!0},dns:{$ref:"#/definitions/string_or_list"},dns_opt:{type:"array",items:{type:"string"},uniqueItems:!0},dns_search:{$ref:"#/definitions/string_or_list"},domainname:{type:"string"},entrypoint:{$ref:"#/definitions/command"},env_file:{$ref:"#/definitions/env_file"},environment:{$ref:"#/definitions/list_or_dict"},expose:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^\\d{1,5}(-\\d{1,5})?(/(tcp|udp))?$"}]},uniqueItems:!0},extends:{oneOf:[{type:"string"},{type:"object",properties:{service:{type:"string"},file:{type:"string"}},required:["service"],additionalProperties:!1}]},external_links:{type:"array",items:{type:"string"},uniqueItems:!0},extra_hosts:{$ref:"#/definitions/list_or_dict"},group_add:{type:"array",items:{type:["string","number"]},uniqueItems:!0},healthcheck:{$ref:"#/definitions/healthcheck"},hostname:{type:"string"},image:{type:"string"},init:{type:"boolean"},ipc:{type:"string"},isolation:{type:"string"},labels:{$ref:"#/definitions/list_or_dict"},links:{type:"array",items:{type:"string"},uniqueItems:!0},logging:{type:"object",properties:{driver:{type:"string"},options:{type:"object",patternProperties:{"^.+$":{type:["string","number","null"]}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},mac_address:{type:"string"},mem_limit:{type:["number","string"]},mem_reservation:{type:["string","integer"]},mem_swappiness:{type:"integer"},memswap_limit:{type:["number","string"]},network_mode:{type:"string"},networks:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{oneOf:[{type:"object",properties:{aliases:{$ref:"#/definitions/list_of_strings"},ipv4_address:{type:"string",format:"ipv4"},ipv6_address:{type:"string",format:"ipv6"},link_local_ips:{$ref:"#/definitions/list_of_strings"},mac_address:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},priority:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"null"}]}},additionalProperties:!1}]},oom_kill_disable:{type:"boolean"},oom_score_adj:{type:"integer",minimum:-1e3,maximum:1e3},pid:{type:["string","null"]},pids_limit:{type:["number","string"]},platform:{type:"string"},ports:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^((\\d+((\\.\\d+)+|(-\\d+))*):?){1,3}(/(tcp|udp))?$"},{type:"object",properties:{name:{type:"string",description:"A human-readable name for the port, used to document it's usage within the service"},mode:{type:"string",pattern:"^ingress|host$",description:"host: For publishing a host port on each node, or ingress: for a port to be load balanced. Defaults to ingress."},host_ip:{type:"string",format:"ipv4",description:"The Host IP mapping, unspecified means all network interfaces (0.0.0.0)"},target:{$ref:"#/definitions/port_format",description:"The container port"},published:{anyOf:[{$ref:"#/definitions/port_format"},{$ref:"#/definitions/port_published_format"}],description:"The publicly exposed port. It is defined as a string and can be set as a range using syntax start-end. It means the actual port is assigned a remaining available port, within the set range."},protocol:{type:"string",pattern:"^tcp|udp$",description:"The port protocol (tcp or udp). Defaults to tcp"},app_protocol:{type:"string",description:"The application protocol (TCP/IP level 4 / OSI level 7) this port is used for. This is optional and can be used as a hint for Compose to offer richer behavior for protocols that it understands"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},uniqueItems:!0},privileged:{type:"boolean"},profiles:{$ref:"#/definitions/list_of_strings"},pull_policy:{type:"string",enum:["always","never","if_not_present","build","missing"]},read_only:{type:"boolean"},restart:{type:"string"},runtime:{type:"string"},scale:{type:"integer"},security_opt:{type:"array",items:{type:"string"},uniqueItems:!0},shm_size:{type:["number","string"]},secrets:{$ref:"#/definitions/service_config_or_secret"},sysctls:{$ref:"#/definitions/list_or_dict"},stdin_open:{type:"boolean"},stop_grace_period:{$ref:"#/definitions/duration_format"},stop_signal:{type:"string"},storage_opt:{type:"object"},tmpfs:{$ref:"#/definitions/string_or_list"},tty:{type:"boolean"},ulimits:{$ref:"#/definitions/ulimits"},user:{type:"string"},uts:{type:"string"},userns_mode:{type:"string"},volumes:{type:"array",items:{oneOf:[{type:"object",required:["type"],properties:{type:{type:"string"},source:{type:"string"},target:{type:"string"},read_only:{type:"boolean"},consistency:{type:"string"},bind:{type:"object",properties:{propagation:{type:"string"},create_host_path:{type:"boolean"},selinux:{type:"string",enum:["z","Z"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{type:"object",properties:{nocopy:{type:"boolean"},subpath:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},tmpfs:{type:"object",properties:{size:{oneOf:[{type:"integer",minimum:0},{type:"string"}]},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"string"}]},uniqueItems:!0},volumes_from:{type:"array",items:{type:"string"},uniqueItems:!0},working_dir:{type:"string"}},patternProperties:{"^x-":{}},additionalProperties:!1},healthcheck:{$id:"#/definitions/healthcheck",type:"object",properties:{disable:{type:"boolean"},interval:{$ref:"#/definitions/duration_format"},retries:{type:"number"},test:{oneOf:[{type:"string"},{type:"array",items:{type:"string"}}]},timeout:{$ref:"#/definitions/duration_format"},start_period:{$ref:"#/definitions/duration_format"},start_interval:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},development:{$id:"#/definitions/development",type:["object","null"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{watch:{type:"array",minItems:1,items:{type:"object",required:["path","action"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{path:{type:"string"},action:{type:"string",enum:["rebuild","sync","sync+restart"]},ignore:{type:"array",items:{type:"string"}},target:{type:"string"}}}}}},deployment:{$id:"#/definitions/deployment",type:["object","null"],properties:{mode:{type:"string"},endpoint_mode:{type:"string"},replicas:{type:"integer"},labels:{$ref:"#/definitions/list_or_dict"},rollback_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},update_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},resources:{type:"object",properties:{limits:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},pids:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}},reservations:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},generic_resources:{$ref:"#/definitions/generic_resources"},devices:{$ref:"#/definitions/devices"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},restart_policy:{type:"object",properties:{condition:{type:"string"},delay:{$ref:"#/definitions/duration_format"},max_attempts:{type:"integer"},window:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},placement:{type:"object",properties:{constraints:{type:"array",items:{type:"string"}},preferences:{type:"array",items:{type:"object",properties:{spread:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},max_replicas_per_node:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},patternProperties:{"^x-":{}},additionalProperties:!1},generic_resources:{$id:"#/definitions/generic_resources",type:"array",items:{type:"object",properties:{discrete_resource_spec:{type:"object",properties:{kind:{type:"string"},value:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},devices:{$id:"#/definitions/devices",type:"array",items:{type:"object",properties:{capabilities:{$ref:"#/definitions/list_of_strings"},count:{anyOf:[{type:"string"},{type:"integer"}]},device_ids:{$ref:"#/definitions/list_of_strings"},driver:{type:"string"},options:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},include:{$id:"#/definitions/include",oneOf:[{type:"string"},{type:"object",properties:{path:{$ref:"#/definitions/string_or_list"},env_file:{$ref:"#/definitions/string_or_list"},project_directory:{type:"string"}},additionalProperties:!1}]},network:{$id:"#/definitions/network",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},ipam:{type:"object",properties:{driver:{type:"string"},config:{type:"array",items:{type:"object",properties:{subnet:{anyOf:[{$ref:"#/definitions/ipv4_subnet_format"},{$ref:"#/definitions/ipv6_subnet_format"}]},ip_range:{type:"string"},gateway:{type:"string"},aux_addresses:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},options:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},internal:{type:"boolean"},enable_ipv6:{type:"boolean"},attachable:{type:"boolean"},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{$id:"#/definitions/volume",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},secret:{$id:"#/definitions/secret",type:"object",properties:{name:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},config:{$id:"#/definitions/config",type:"object",properties:{name:{type:"string"},content:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},command:{oneOf:[{type:"null"},{type:"string"},{type:"array",items:{type:"string"}}]},env_file:{oneOf:[{type:"string"},{type:"array",items:{oneOf:[{type:"string"},{type:"object",additionalProperties:!1,properties:{path:{type:"string"},required:{type:"boolean",default:!0}},required:["path"]}]}}]},string_or_list:{oneOf:[{type:"string"},{$ref:"#/definitions/list_of_strings"}]},list_of_strings:{type:"array",items:{type:"string"},uniqueItems:!0},duration_format:{type:"string",pattern:"^([0-9]+h)?([0-9]+m)?([0-9]+s)?([0-9]+ms)?([0-9]+us)?([0-9]+ns)?$"},expose_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?(/tcp|udp)?$"},port_published_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?$"},port_format:{type:"integer",minimum:0,maximum:65535},ipv6_subnet_format:{type:"string",pattern:"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))/(?:\\d|[12]\\d|3[01])"},ipv4_subnet_format:{type:"string",pattern:"((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}/(?:\\d|[12]\\d|3[01])"},list_or_dict:{oneOf:[{type:"object",patternProperties:{".+":{type:["string","number","boolean","null"]}},additionalProperties:!1},{type:"array",items:{type:"string"},uniqueItems:!0}]},blkio_limit:{type:"object",properties:{path:{type:"string"},rate:{type:["integer","string"]}},additionalProperties:!1},blkio_weight:{type:"object",properties:{path:{type:"string"},weight:{type:"integer"}},additionalProperties:!1},service_config_or_secret:{type:"array",items:{oneOf:[{type:"string"},{type:"object",properties:{source:{type:"string"},target:{type:"string"},uid:{type:"string"},gid:{type:"string"},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]}},ulimits:{type:"object",patternProperties:{"^[a-z]+$":{oneOf:[{type:"integer"},{type:"object",properties:{hard:{type:"integer"},soft:{type:"integer"}},required:["soft","hard"],additionalProperties:!1,patternProperties:{"^x-":{}}}]}}},constraints:{service:{$id:"#/definitions/constraints/service",anyOf:[{required:["build"]},{required:["image"]}],properties:{build:{required:["context"]}}}}}};async function l(){return z.object({manifestVersion:z.number().refine((e=>1===e||1.1===e),{message:"The manifest version can either be '1' or '1.1'"}),id:z.string().refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the app repository"}),disabled:z.boolean().optional(),name:z.string().min(1).max(50),tagline:z.string().min(1).max(100).refine((async e=>!(e.endsWith(".")&&2===e.split(".").length)),{message:"Taglines should not end with a period"}),icon:z.string().optional(),category:z["enum"](["files","bitcoin","media","networking","social","automation","finance","ai","developer"]),version:z.string().min(1),port:z.number().min(0).max(65535),description:z.string().min(1).max(5e3),developer:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),website:z.string().url(),submitter:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),submission:z.string().url(),repo:z.string().url().or(z.literal("")),support:z.string().url(),gallery:z.string().array(),releaseNotes:z.string().min(0).max(5e3),dependencies:z.string().array(),permissions:z["enum"](["STORAGE_DOWNLOADS"]).array().optional(),path:z.string().refine((e=>function(e){try{return new URL(e),!0}catch{return!1}}(`https://example.com${e}`))),defaultUsername:z.string().optional().or(z.literal("")),defaultPassword:z.string().optional().or(z.literal("")),deterministicPassword:z.boolean().optional(),optimizedForUmbrelHome:z.boolean().optional(),torOnly:z.boolean().optional(),installSize:z.number().min(0).optional(),widgets:z.any().array().optional(),defaultShell:z.string().optional()}).refine((e=>!e.dependencies?.includes(e.id)),{message:"Dependencies can't include its own app id"})}function c(e,t){const s=new dist.LineCounter,n=new dist.Parser(s.addNewLine),[o]=n.parse(e);return function e(t,i){switch(t.type){case"document":return e(t.value,i);case"block-map":for(const r of t.items)if(r.key&&"source"in r.key&&r.key.source===i[0]){if(1===i.length){const e=s.linePos(r.key.offset);if(r.value&&"end"in r.value&&r.value.end&&r.value.end[0]){const t=s.linePos(r.value.offset),i=s.linePos(r.value.end[0].offset);return e.line===i.line?{line:{start:e.line,end:e.line},column:{start:t.col,end:i.col}}:{line:{start:e.line,end:i.line}}}return{line:{start:e.line,end:e.line}}}return r.value?(i.splice(0,1),e(r.value,i)):void 0}break;case"block-seq":{const r=parseInt(String(i[0]));if(isNaN(r))return;if(r<0||r>=t.items.length)return;const n=t.items[r];if(!n||!n.value)return;if(1===i.length){const e=s.linePos(n.value.offset);if("end"in n.value&&n.value.end&&n.value.end[0]){const t=s.linePos(n.value.end[0].offset);return e.line===t.line?{line:{start:e.line,end:e.line},column:{start:e.col,end:t.col}}:{line:{start:e.line,end:t.line}}}return{line:{start:e.line,end:e.line}}}if(n.value)return i.splice(0,1),e(n.value,i);break}}}(o,t)}const d=new Map;async function m(e){const t=d.get(e.APIHost);if(t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);const i=await fetch(`https://${e.APIHost}/v2/`,{signal:t.signal});if(!("registry/2.0"===i.headers.get("Docker-Distribution-Api-Version")))throw new Error(`"${e.APIHost}" is not a valid CNCF distribution registry`);let r;if(401===i.status){const e=i.headers.get("Www-Authenticate");if(!e)throw new Error(`Missing auth header for "${i.url}"`);r=function(e){if(!e.startsWith("Bearer"))throw new Error(`Only Bearer token authorization is supported: ${e}`);const t=e.match(/realm="(.*?)"/)?.[1];if(!t)throw new Error(`Failed to get realm from auth header: ${e}`);const i=e.match(/service="(.*?)"/)?.[1];if(!i)throw new Error(`Failed to get service from auth header: ${e}`);const r=e.match(/scope="(.*?)"/)?.[1];return{realm:t,service:i,scope:r}}(e)}const s={host:e.APIHost,auth:r};return d.set(e.APIHost,s),s}catch(t){throw d.set(e.APIHost,!1),t}}async function y(e,t,i){const r=await async function(e){const t=await m(e);if(!t.auth)return;const i=new URL(t.auth.realm);i.searchParams.set("service",t.auth.service),i.searchParams.set("scope",`repository:${e.APIPath}:pull`);const r=await fetch(i);return(await r.json()).token}(e),s=new Headers(i?.headers);return r&&s.append("Authorization",`Bearer ${r}`),fetch(t,{...i,headers:s})}async function f(e){const t=await async function(e){const t=new Headers;t.append("Accept","application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json");const i=await y(e,`https://${e.APIHost}/v2/${e.APIPath}/manifests/${e.digest?encodeURIComponent(e.digest):e.tag}`,{headers:t});if(!i.ok)throw new Error(`HTTP ${i.status} for ${e.toString()}: ${await i.text()}`);const r=await i.json(),s=i.headers.get("Content-Type");switch(s){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return r;default:throw new Error(`Unsupported content type: ${s}`)}}(e);switch(t.mediaType){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":return[];case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return t.manifests.map((e=>({os:e.platform.os,architecture:e.platform.architecture,variant:e.platform.variant})))}}class u{#e;#t;#i;#r;constructor({host:e,path:t,tag:i,digest:r}){this.#e=e,this.#t=t,this.#i=i,this.#r=r}static#s(e){return"docker.io"===e?"registry.hub.docker.com":e}static async fromString(e){const t=/^(?<path>[a-z0-9_.:-]+?(?:\/[a-z0-9_.-]+)*)(?::(?<tag>[a-zA-Z0-9_.-]+))?(?!.*(?<!.*@.*):)(?:@(?<digest>[a-z0-9]+:[0-9a-f]{64}))?$/m.exec(e);if(!t||!t.groups)throw new Error(`Invalid image format: ${e}`);let i=t.groups.path;const{tag:r,digest:s}=t.groups,n=i.split("/");if(1===n.length)return new u({host:void 0,path:i,tag:r,digest:s});let o;return await u.isRegistry(n[0])&&(o=n[0],i=n.slice(1).join("/")),new u({host:o,path:i,tag:r,digest:s})}static#n=new Map;static async isRegistry(e){e=u.#s(e);const t=u.#n.get(e);if("boolean"==typeof t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);return"registry/2.0"===(await fetch(`https://${e}/v2/`,{signal:t.signal})).headers.get("Docker-Distribution-Api-Version")}catch{return u.#n.set(e,!1),!1}}get host(){return this.#e||"docker.io"}get APIHost(){return u.#s(this.host)}get path(){return this.#t}get APIPath(){const e=this.path;return e.includes("/")?e:`library/${this.#t}`}get tag(){return this.#i||"latest"}get digest(){return this.#r}toString(){let e=this.#t;return this.#e&&(e=`${this.#e}/${e}`),this.#i&&(e=`${e}:${this.#i}`),this.#r&&(e=`${e}@${this.#r}`),e}toFullString(){return`${this.host}/${this.path}:${this.tag}${this.digest?`@${this.digest}`:""}`}}async function g(e){let i;try{i=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app-store.yml is not a valid YAML file",message:String(e),file:"umbrel-app-store.yml"}]}const r=await async function(){return z.object({id:z.string().min(1).max(50).refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the official Umbrel App Store."}).refine((e=>/^[a-z]+(?:-[a-z]+)*$/.test(e)),{message:"The id of the app should contain only alphabets ('a' to 'z') and dashes ('-')."}),name:z.string().min(1).max(50)})}(),n=await r.safeParseAsync(i);return n.success?[]:n.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:"umbrel-app-store.yml"})))}async function h(e,i,r={}){let s;try{s=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app.yml is not a valid YAML file",message:String(e),file:`${i}/umbrel-app.yml`}]}const n=await l(),o=await n.safeParseAsync(s);let a=[];return o.success||(a=o.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:`${i}/umbrel-app.yml`})))),r.isNewAppSubmission&&r.pullRequestUrl&&s.submission!==r.pullRequestUrl&&a.push({id:"invalid_submission_field",severity:"error",propertiesPath:"submission",...c(e,["submission"]),title:`Invalid submission field "${s.submission}"`,message:`The submission field must be set to the URL of this pull request: ${r.pullRequestUrl}`,file:`${i}/umbrel-app.yml`}),r.isNewAppSubmission&&"string"==typeof s.releaseNotes&&s.releaseNotes.length>0&&a.push({id:"filled_out_release_notes_on_first_submission",severity:"error",propertiesPath:"releaseNotes",...c(e,["releaseNotes"]),title:'"releaseNotes" needs to be empty for new app submissions',message:'The "releaseNotes" field must be empty for new app submissions as it is being displayed to the user only in case of an update.',file:`${i}/umbrel-app.yml`}),a}async function _(i,r,s,l={}){const d=await a(i);let m,y;try{m=dist.parse(i,{merge:!0}),y=dist.parse(d,{merge:!0})}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"docker-compose.yml is not a valid YAML file",message:String(e),file:`${r}/docker-compose.yml`}]}const g=new ajv({allowUnionTypes:!0});ajv_formats_dist(g);const h=g.compile(p);if(!h(y))return(h.errors??[]).map((t=>({id:t.keyword,propertiesPath:external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean).join("."),...c(i,external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean)),severity:"error",title:t.instancePath,message:t.message??"Unknown error",file:`${r}/docker-compose.yml`})));const _=[],b=Object.keys(m.services??{}),v=Object.keys(y.services??{});for(const e of v){const t=y.services?.[e].image;if(!t)continue;const s=t.match(/^(.+):(.+)@(.+)$/);if(s){const[,t]=s.slice(1);"latest"===t&&_.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"warning",title:`Invalid image tag "${t}"`,message:'Images should not use the "latest" tag',file:`${r}/docker-compose.yml`})}else _.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${t}"`,message:'Images should be named like "<name>:<version-tag>@<sha256>"',file:`${r}/docker-compose.yml`})}for(const e of v){const t=y.services?.[e].environment,s=y.services?.[e].labels,n=y.services?.[e].extra_hosts,o=[];t&&!Array.isArray(t)&&o.push({label:"environment",entries:Object.entries(t)}),s&&!Array.isArray(s)&&o.push({label:"labels",entries:Object.entries(s)}),n&&!Array.isArray(n)&&o.push({label:"extra_hosts",entries:Object.entries(n)});for(const t of o)for(const[s,n]of t.entries)"boolean"==typeof n&&_.push({id:"invalid_yaml_boolean_value",propertiesPath:`services.${e}.${t.label}.${s}`,...c(i,["services",e,t.label,s]),severity:"error",title:`Invalid YAML boolean value for key "${s}"`,message:`Boolean values should be strings like "${n}" instead of ${n}`,file:`${r}/docker-compose.yml`})}for(const e of b){const t=m.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s?s.match(/\$\{?APP_DATA_DIR\}?\/?:/)&&_.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "\${APP_DATA_DIR}/data${s.split(":")[1]??""}" instead.`,file:`${r}/docker-compose.yml`}):"object"==typeof s&&"source"in s&&"target"in s&&s.source.match(/\$\{?APP_DATA_DIR\}?\/?$/)&&_.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s.source}:${s.target}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "source: \${APP_DATA_DIR}/data" and "target: ${s.target??"/some/dir"}" instead.`,file:`${r}/docker-compose.yml`})}for(const e of b){const t=m.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const n of t)if("string"==typeof n){if(n.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.match(/\$\{?APP_DATA_DIR\}?\/?(.*?):/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||_.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}else if("object"==typeof n&&"source"in n&&"target"in n&&n.source.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.source.match(/\$\{?APP_DATA_DIR\}?\/?(.*?)$/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||_.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n.source}:${n.target}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}for(const e of b){const t=m.services?.[e].ports;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s||"number"==typeof s?_.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s}"`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`}):"object"==typeof s&&"target"in s&&_.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s.target}${s.published?`:${s.published}`:""}`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`})}if(l.checkImageArchitectures)for(const e of b){const t=m.services?.[e].image;if(!t)continue;let s;try{s=await u.fromString(t)}catch(e){_.push({id:"invalid_docker_image_name",severity:"error",title:"Invalid image name",message:String(e),file:`${r}/docker-compose.yml`});continue}try{const t=await f(s);t.find((e=>"linux"===e.os&&"arm64"===e.architecture))&&t.find((e=>"linux"===e.os&&"amd64"===e.architecture))||_.push({id:"invalid_image_architectures",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image architectures for image "${s}"`,message:`The image "${s}" does not support the architectures "arm64" and "amd64". Please make sure that the image supports both architectures.`,file:`${r}/docker-compose.yml`})}catch(t){_.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${s}"`,message:String(t),file:`${r}/docker-compose.yml`})}}for(const e of v){if("app_proxy"===e)continue;const t=y.services?.[e].user,s=y.services?.[e].environment;let n=!1;if(s)if(Array.isArray(s))(s.includes("UID=1000")||s.includes("PUID=1000"))&&(n=!0);else for(const[e,t]of Object.entries(s))"UID"!==e&&"PUID"!==e||"1000"===String(t)&&(n=!0);"root"===t?_.push({id:"invalid_container_user",propertiesPath:`services.${e}.user`,...c(i,["services",e,"user"]),severity:"info",title:`Using unsafe user "${t}" in service "${e}"`,message:`The user "${t}" can lead to security vulnerabilities. If possible please use a non-root user instead.`,file:`${r}/docker-compose.yml`}):t||n||_.push({id:"invalid_container_user",severity:"info",title:`Potentially using unsafe user in service "${e}"`,message:'The default container user "root" can lead to security vulnerabilities. If you are using the root user, please try to specify a different user (e.g. "1000:1000") in the compose file or try to set the UID/PUID and GID/PGID environment variables to 1000.',file:`${r}/docker-compose.yml`})}for(const e of v){const t=y.services?.[e].network_mode;"host"===t&&_.push({id:"container_network_mode_host",propertiesPath:`services.${e}.network_mode`,...c(i,["services",e,"network_mode"]),severity:"info",title:`Service "${e}" uses host network mode`,message:"The host network mode can lead to security vulnerabilities. If possible please use the default bridge network mode and expose the necessary ports.",file:`${r}/docker-compose.yml`})}return _}function b(e){const t=e.filter((e=>"directory"===e.type)).filter((t=>!e.some((e=>e.path.length>t.path.length&&e.path.startsWith(t.path))))),i=[];for(const e of t)i.push({id:"empty_app_data_directory",severity:"error",title:`Empty directory "${e.path}"`,message:`Please add a ".gitkeep" file to the directory "${e.path}". This is necessary to ensure the correct permissions of the directory after cloning!`,file:e.path});return i}z.setErrorMap(((e,t)=>e.code===z.ZodIssueCode.invalid_type&&"undefined"===e.received?{message:`The "${e.path.join(".")}" key is required`}:{message:t.defaultError}));
 
 
 /***/ }),
