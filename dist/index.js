@@ -35326,7 +35326,7 @@ try {
     (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("warnings", numberOfWarnings);
     (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setOutput)("infos", numberOfInfos);
     // Helper function to create a string of spaces, which are not trimmed by GitHub
-    const nbsp = (count) => '&nbsp;'.repeat(count);
+    const nbsp = (count) => "&nbsp;".repeat(count);
     let title = "";
     switch (true) {
         case numberOfErrors === 0 && numberOfWarnings === 0:
@@ -35397,6 +35397,23 @@ try {
             ],
             ["ℹ️", "**Info:** This is just for your information."],
         ]);
+    }
+    // Delete previous comments from this bot on the PR
+    if (_actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request) {
+        const comments = await octokit.rest.issues.listComments({
+            owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
+            repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
+            issue_number: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request.number,
+        });
+        for (const comment of comments.data) {
+            if (comment.user?.login === "github-actions[bot]") {
+                await octokit.rest.issues.deleteComment({
+                    owner: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.owner,
+                    repo: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo.repo,
+                    comment_id: comment.id,
+                });
+            }
+        }
     }
     // Create a comment on the PR
     if (_actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request) {

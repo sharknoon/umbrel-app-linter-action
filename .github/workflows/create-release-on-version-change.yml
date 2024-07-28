@@ -21,7 +21,7 @@ jobs:
         id: get_latest_tag
         run: |
           git fetch --tags
-          echo "LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))" >> $GITHUB_OUTPUT
+          echo "LATEST_TAG=$(git describe --match 'v*.*.*' --always --tags $(git rev-list --tags --max-count=100) | head -n 1)" >> $GITHUB_OUTPUT
       - if: steps.check.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:

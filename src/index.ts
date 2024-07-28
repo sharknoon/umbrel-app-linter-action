@@ -160,7 +160,7 @@ try {
   setOutput("infos", numberOfInfos);
 
   // Helper function to create a string of spaces, which are not trimmed by GitHub
-  const nbsp = (count: number) => '&nbsp;'.repeat(count);
+  const nbsp = (count: number) => "&nbsp;".repeat(count);
 
   let title = "";
   switch (true) {
@@ -238,6 +238,24 @@ try {
       ],
       ["ℹ️", "**Info:** This is just for your information."],
     ]);
+  }
+
+  // Delete previous comments from this bot on the PR
+  if (context.payload.pull_request) {
+    const comments = await octokit.rest.issues.listComments({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      issue_number: context.payload.pull_request.number,
+    });
+    for (const comment of comments.data) {
+      if (comment.user?.login === "github-actions[bot]") {
+        await octokit.rest.issues.deleteComment({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          comment_id: comment.id,
+        });
+      }
+    }
   }
 
   // Create a comment on the PR
