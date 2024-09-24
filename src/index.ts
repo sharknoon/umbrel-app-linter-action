@@ -9,9 +9,6 @@ import {
   setFailed,
 } from "@actions/core";
 import { context, getOctokit } from "@actions/github";
-import { pipeline } from "node:stream/promises";
-import fs from "node:fs";
-import yauzl from "yauzl";
 import {
   lintUmbrelAppYml,
   LintingResult,
@@ -19,6 +16,7 @@ import {
   lintUmbrelAppStoreYml,
   lintDirectoryStructure,
 } from "umbrel-cli/dist/lib.js";
+import { TextWriter, ZipReader } from "@zip.js/zip.js";
 
 const supportedFiles = [
   "umbrel-app.yml",
@@ -120,47 +118,20 @@ try {
       }
     );
 
-    console.log("Writing repo zipball to disk");
-    await pipeline(
-      data as ReadableStream<Uint8Array>,
-      fs.createWriteStream("repo.zip")
-    );
-
     const umbrelAppYmlsContent: string[] = [];
     console.log("Extracting umbrel-app.yml files from repo");
-    yauzl.open("repo.zip", { lazyEntries: true }, (err, zipfile) => {
-      if (err) {
-        throw err;
+    const zipReader = new ZipReader(data as ReadableStream<Uint8Array>);
+    const entries = await zipReader.getEntries();
+    for (const entry of entries) {
+      if (entry.filename.endsWith("umbrel-app.yml")) {
+        console.log("Found umbrel-app.yml file:", entry.filename);
+        const content = await entry.getData!(new TextWriter());
+        umbrelAppYmlsContent.push(content);
+        console.log("Read umbrel-app.yml file:", content);
       }
-      zipfile.readEntry();
-      zipfile.on("entry", (entry) => {
-        if (entry.fileName.endsWith("umbrel-app.yml")) {
-          console.log("Found umbrel-app.yml file:", entry.fileName);
-          zipfile.openReadStream(entry, (err, readStream) => {
-            if (err) {
-              throw err;
-            }
-            let data = "";
-            readStream.on("data", (chunk) => {
-              data += chunk.toString("utf8");
-            });
-            readStream.on("end", () => {
-              umbrelAppYmlsContent.push(data);
-              console.log("Read umbrel-app.yml file:", data);
-              zipfile.readEntry();
-            });
-          });
-        } else {
-          zipfile.readEntry();
-        }
-      });
-      zipfile.on("end", () => {
-        zipfile.close();
-      });
-    });
+    }
+    await zipReader.close();
 
-    fs.rmSync("repo.zip");
-    console.log("Deleted repo zipball from disk");
     console.log(
       "All umbrel-app.yml files:",
       JSON.stringify(umbrelAppYmlsContent)
