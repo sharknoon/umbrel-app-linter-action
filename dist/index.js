@@ -36714,7 +36714,7 @@ try {
                         });
                         readStream.on("end", () => {
                             umbrelAppYmlsContent.push(data);
-                            console.log("Read umbrel-app.yml file:", entry.fileName);
+                            console.log("Read umbrel-app.yml file:", data);
                             zipfile.readEntry();
                         });
                     });
@@ -36728,6 +36728,8 @@ try {
             });
         });
         node_fs__WEBPACK_IMPORTED_MODULE_3___default().rmSync("repo.zip");
+        console.log("Deleted repo zipball from disk");
+        console.log("All umbrel-app.yml files:", JSON.stringify(umbrelAppYmlsContent));
         // Lint the files
         switch (true) {
             case file.filename.endsWith("umbrel-app.yml"): {
