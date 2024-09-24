@@ -36730,6 +36730,7 @@ try {
                 const umbrelAppYmlResult = await (0,umbrel_cli_dist_lib_js__WEBPACK_IMPORTED_MODULE_5__/* .lintUmbrelAppYml */ .Bm)(content, appId, {
                     isNewAppSubmission: file.status === "added",
                     pullRequestUrl: _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request?.html_url,
+                    allUmbrelAppYmlContents: umbrelAppYmlsContent,
                 });
                 result.push(...umbrelAppYmlResult);
                 break;
