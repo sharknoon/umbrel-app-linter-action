@@ -9,6 +9,9 @@ import {
   setFailed,
 } from "@actions/core";
 import { context, getOctokit } from "@actions/github";
+import { pipeline } from "node:stream/promises";
+import fs from "node:fs";
+import yauzl from "yauzl";
 import {
   lintUmbrelAppYml,
   LintingResult,
@@ -103,6 +106,56 @@ try {
       "utf-8"
     );
 
+    // Get the content of all umbrel-app.yml files
+    const { data } = await octokit.request(
+      "GET /repos/{owner}/{repo}/zipball/{ref}",
+      {
+        request: {
+          parseSuccessResponseBody: false,
+        },
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        ref: base,
+      }
+    );
+
+    await pipeline(
+      data as ReadableStream<Uint8Array>,
+      fs.createWriteStream("repo.zip")
+    );
+
+    const umbrelAppYmlsContent: string[] = [];
+    yauzl.open("repo.zip", { lazyEntries: true }, (err, zipfile) => {
+      if (err) {
+        throw err;
+      }
+      zipfile.readEntry();
+      zipfile.on("entry", (entry) => {
+        if (entry.fileName.endsWith("umbrel-app.yml")) {
+          zipfile.openReadStream(entry, (err, readStream) => {
+            if (err) {
+              throw err;
+            }
+            let data = "";
+            readStream.on("data", (chunk) => {
+              data += chunk.toString("utf8");
+            });
+            readStream.on("end", () => {
+              umbrelAppYmlsContent.push(data);
+              zipfile.readEntry();
+            });
+          });
+        } else {
+          zipfile.readEntry();
+        }
+      });
+      zipfile.on("end", () => {
+        zipfile.close();
+      });
+    });
+
+    fs.rmSync("repo.zip");
+
     // Lint the files
     switch (true) {
       case file.filename.endsWith("umbrel-app.yml"): {
@@ -110,6 +163,7 @@ try {
         const umbrelAppYmlResult = await lintUmbrelAppYml(content, appId, {
           isNewAppSubmission: file.status === "added",
           pullRequestUrl: context.payload.pull_request?.html_url,
+          allUmbrelAppYmlContents: umbrelAppYmlsContent,
         });
         result.push(...umbrelAppYmlResult);
         break;
