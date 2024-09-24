@@ -107,6 +107,7 @@ try {
     );
 
     // Get the content of all umbrel-app.yml files
+    console.log("Downloading repo zipball to get all umbrel-app.yml files");
     const { data } = await octokit.request(
       "GET /repos/{owner}/{repo}/zipball/{ref}",
       {
@@ -119,12 +120,14 @@ try {
       }
     );
 
+    console.log("Writing repo zipball to disk");
     await pipeline(
       data as ReadableStream<Uint8Array>,
       fs.createWriteStream("repo.zip")
     );
 
     const umbrelAppYmlsContent: string[] = [];
+    console.log("Extracting umbrel-app.yml files from repo");
     yauzl.open("repo.zip", { lazyEntries: true }, (err, zipfile) => {
       if (err) {
         throw err;
@@ -132,6 +135,7 @@ try {
       zipfile.readEntry();
       zipfile.on("entry", (entry) => {
         if (entry.fileName.endsWith("umbrel-app.yml")) {
+          console.log("Found umbrel-app.yml file:", entry.fileName);
           zipfile.openReadStream(entry, (err, readStream) => {
             if (err) {
               throw err;
@@ -142,6 +146,7 @@ try {
             });
             readStream.on("end", () => {
               umbrelAppYmlsContent.push(data);
+              console.log("Read umbrel-app.yml file:", entry.fileName);
               zipfile.readEntry();
             });
           });
