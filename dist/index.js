@@ -36341,10 +36341,24 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("net");
 
 /***/ }),
 
+/***/ 4573:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:buffer");
+
+/***/ }),
+
 /***/ 8474:
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:events");
+
+/***/ }),
+
+/***/ 1708:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:process");
 
 /***/ }),
 
@@ -38935,8 +38949,8 @@ function composeCollection(CN, ctx, token, props, onError) {
             tag = kt;
         }
         else {
-            if (kt?.collection) {
-                onError(tagToken, 'BAD_COLLECTION_TYPE', `${kt.tag} used for ${expType} collection, but expects ${kt.collection}`, true);
+            if (kt) {
+                onError(tagToken, 'BAD_COLLECTION_TYPE', `${kt.tag} used for ${expType} collection, but expects ${kt.collection ?? 'scalar'}`, true);
             }
             else {
                 onError(tagToken, 'TAG_RESOLVE_FAILED', `Unresolved tag: ${tagName}`, true);
@@ -39225,6 +39239,7 @@ exports.composeScalar = composeScalar;
 
 
 
+var node_process = __nccwpck_require__(1708);
 var directives = __nccwpck_require__(1342);
 var Document = __nccwpck_require__(3021);
 var errors = __nccwpck_require__(1464);
@@ -39358,7 +39373,7 @@ class Composer {
     }
     /** Advance the composer by one CST token. */
     *next(token) {
-        if (process.env.LOG_STREAM)
+        if (node_process.env.LOG_STREAM)
             console.dir(token, { depth: null });
         switch (token.type) {
             case 'directive':
@@ -40393,7 +40408,7 @@ function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIn
                 if (atNewline) {
                     if (comment)
                         comment += token.source;
-                    else
+                    else if (!found || indicator !== 'seq-item-ind')
                         spaceBefore = true;
                 }
                 else
@@ -41515,9 +41530,11 @@ exports.visitAsync = visit.visitAsync;
 /***/ }),
 
 /***/ 7249:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
+
+var node_process = __nccwpck_require__(1708);
 
 function debug(logLevel, ...messages) {
     if (logLevel === 'debug')
@@ -41525,8 +41542,8 @@ function debug(logLevel, ...messages) {
 }
 function warn(logLevel, warning) {
     if (logLevel === 'debug' || logLevel === 'warn') {
-        if (typeof process !== 'undefined' && process.emitWarning)
-            process.emitWarning(warning);
+        if (typeof node_process.emitWarning === 'function')
+            node_process.emitWarning(warning);
         else
             console.warn(warning);
     }
@@ -43685,6 +43702,7 @@ exports.LineCounter = LineCounter;
 
 
 
+var node_process = __nccwpck_require__(1708);
 var cst = __nccwpck_require__(3461);
 var lexer = __nccwpck_require__(361);
 
@@ -43851,7 +43869,7 @@ class Parser {
      */
     *next(source) {
         this.source = source;
-        if (process.env.LOG_TOKENS)
+        if (node_process.env.LOG_TOKENS)
             console.log('|', cst.prettyToken(source));
         if (this.atScalar) {
             this.atScalar = false;
@@ -44357,7 +44375,20 @@ class Parser {
                 default: {
                     const bv = this.startBlockValue(map);
                     if (bv) {
-                        if (atMapIndent && bv.type !== 'block-seq') {
+                        if (bv.type === 'block-seq') {
+                            if (!it.explicitKey &&
+                                it.sep &&
+                                !includesToken(it.sep, 'newline')) {
+                                yield* this.pop({
+                                    type: 'error',
+                                    offset: this.offset,
+                                    message: 'Unexpected block-seq-ind on same line with key',
+                                    source: this.source
+                                });
+                                return;
+                            }
+                        }
+                        else if (atMapIndent) {
                             map.items.push({ start });
                         }
                         this.stack.push(bv);
@@ -45101,7 +45132,7 @@ const jsonScalars = [
         identify: value => typeof value === 'boolean',
         default: true,
         tag: 'tag:yaml.org,2002:bool',
-        test: /^true|false$/,
+        test: /^true$|^false$/,
         resolve: str => str === 'true',
         stringify: stringifyJSON
     },
@@ -45249,6 +45280,7 @@ exports.getTags = getTags;
 
 
 
+var node_buffer = __nccwpck_require__(4573);
 var Scalar = __nccwpck_require__(3301);
 var stringifyString = __nccwpck_require__(3069);
 
@@ -45265,8 +45297,8 @@ const binary = {
      *   document.querySelector('#photo').src = URL.createObjectURL(blob)
      */
     resolve(src, onError) {
-        if (typeof Buffer === 'function') {
-            return Buffer.from(src, 'base64');
+        if (typeof node_buffer.Buffer === 'function') {
+            return node_buffer.Buffer.from(src, 'base64');
         }
         else if (typeof atob === 'function') {
             // On IE 11, atob() can't handle newlines
@@ -45282,13 +45314,15 @@ const binary = {
         }
     },
     stringify({ comment, type, value }, ctx, onComment, onChompKeep) {
+        if (!value)
+            return '';
         const buf = value; // checked earlier by binary.identify()
         let str;
-        if (typeof Buffer === 'function') {
+        if (typeof node_buffer.Buffer === 'function') {
             str =
-                buf instanceof Buffer
+                buf instanceof node_buffer.Buffer
                     ? buf.toString('base64')
-                    : Buffer.from(buf.buffer).toString('base64');
+                    : node_buffer.Buffer.from(buf.buffer).toString('base64');
         }
         else if (typeof btoa === 'function') {
             let s = '';
@@ -45996,7 +46030,7 @@ const timestamp = {
         }
         return new Date(date);
     },
-    stringify: ({ value }) => value.toISOString().replace(/((T00:00)?:00)?\.000Z$/, '')
+    stringify: ({ value }) => value?.toISOString().replace(/(T00:00:00)?\.000Z$/, '') ?? ''
 };
 
 exports.floatTime = floatTime;
@@ -46998,23 +47032,32 @@ function blockString({ comment, type, value }, ctx, onComment, onChompKeep) {
         start = start.replace(/\n+/g, `$&${indent}`);
     }
     const indentSize = indent ? '2' : '1'; // root is at -1
-    let header = (literal ? '|' : '>') + (startWithSpace ? indentSize : '') + chomp;
+    // Leading | or > is added later
+    let header = (startWithSpace ? indentSize : '') + chomp;
     if (comment) {
         header += ' ' + commentString(comment.replace(/ ?[\r\n]+/g, ' '));
         if (onComment)
             onComment();
     }
-    if (literal) {
-        value = value.replace(/\n+/g, `$&${indent}`);
-        return `${header}\n${indent}${start}${value}${end}`;
+    if (!literal) {
+        const foldedValue = value
+            .replace(/\n+/g, '\n$&')
+            .replace(/(?:^|\n)([\t ].*)(?:([\n\t ]*)\n(?![\n\t ]))?/g, '$1$2') // more-indented lines aren't folded
+            //                ^ more-ind. ^ empty     ^ capture next empty lines only at end of indent
+            .replace(/\n+/g, `$&${indent}`);
+        let literalFallback = false;
+        const foldOptions = getFoldOptions(ctx, true);
+        if (blockQuote !== 'folded' && type !== Scalar.Scalar.BLOCK_FOLDED) {
+            foldOptions.onOverflow = () => {
+                literalFallback = true;
+            };
+        }
+        const body = foldFlowLines.foldFlowLines(`${start}${foldedValue}${end}`, indent, foldFlowLines.FOLD_BLOCK, foldOptions);
+        if (!literalFallback)
+            return `>${header}\n${indent}${body}`;
     }
-    value = value
-        .replace(/\n+/g, '\n$&')
-        .replace(/(?:^|\n)([\t ].*)(?:([\n\t ]*)\n(?![\n\t ]))?/g, '$1$2') // more-indented lines aren't folded
-        //                ^ more-ind. ^ empty     ^ capture next empty lines only at end of indent
-        .replace(/\n+/g, `$&${indent}`);
-    const body = foldFlowLines.foldFlowLines(`${start}${value}${end}`, indent, foldFlowLines.FOLD_BLOCK, getFoldOptions(ctx, true));
-    return `${header}\n${indent}${body}`;
+    value = value.replace(/\n+/g, `$&${indent}`);
+    return `|${header}\n${indent}${start}${value}${end}`;
 }
 function plainString(item, ctx, onComment, onChompKeep) {
     const { type, value } = item;
@@ -47362,7 +47405,7 @@ __nccwpck_require__.d(__webpack_exports__, {
   zg: () => (/* reexport */ ZipReader)
 });
 
-// UNUSED EXPORTS: BlobReader, BlobWriter, Data64URIReader, Data64URIWriter, ERR_BAD_FORMAT, ERR_CENTRAL_DIRECTORY_NOT_FOUND, ERR_DUPLICATED_NAME, ERR_ENCRYPTED, ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND, ERR_EOCDR_NOT_FOUND, ERR_EXTRAFIELD_ZIP64_NOT_FOUND, ERR_HTTP_RANGE, ERR_INVALID_COMMENT, ERR_INVALID_ENCRYPTION_STRENGTH, ERR_INVALID_ENTRY_COMMENT, ERR_INVALID_ENTRY_NAME, ERR_INVALID_EXTRAFIELD_DATA, ERR_INVALID_EXTRAFIELD_TYPE, ERR_INVALID_PASSWORD, ERR_INVALID_SIGNATURE, ERR_INVALID_VERSION, ERR_ITERATOR_COMPLETED_TOO_SOON, ERR_LOCAL_FILE_HEADER_NOT_FOUND, ERR_SPLIT_ZIP_FILE, ERR_UNDEFINED_UNCOMPRESSED_SIZE, ERR_UNSUPPORTED_COMPRESSION, ERR_UNSUPPORTED_ENCRYPTION, ERR_UNSUPPORTED_FORMAT, HttpRangeReader, HttpReader, Reader, SplitDataReader, SplitDataWriter, SplitZipReader, SplitZipWriter, TextReader, Uint8ArrayReader, Uint8ArrayWriter, Writer, ZipReaderStream, ZipWriter, ZipWriterStream, configure, fs, getMimeType, initShimAsyncCodec, terminateWorkers
+// UNUSED EXPORTS: BlobReader, BlobWriter, Data64URIReader, Data64URIWriter, ERR_BAD_FORMAT, ERR_CENTRAL_DIRECTORY_NOT_FOUND, ERR_DUPLICATED_NAME, ERR_ENCRYPTED, ERR_EOCDR_LOCATOR_ZIP64_NOT_FOUND, ERR_EOCDR_NOT_FOUND, ERR_EXTRAFIELD_ZIP64_NOT_FOUND, ERR_HTTP_RANGE, ERR_INVALID_COMMENT, ERR_INVALID_ENCRYPTION_STRENGTH, ERR_INVALID_ENTRY_COMMENT, ERR_INVALID_ENTRY_NAME, ERR_INVALID_EXTRAFIELD_DATA, ERR_INVALID_EXTRAFIELD_TYPE, ERR_INVALID_PASSWORD, ERR_INVALID_SIGNATURE, ERR_INVALID_VERSION, ERR_ITERATOR_COMPLETED_TOO_SOON, ERR_LOCAL_FILE_HEADER_NOT_FOUND, ERR_SPLIT_ZIP_FILE, ERR_UNDEFINED_UNCOMPRESSED_SIZE, ERR_UNSUPPORTED_COMPRESSION, ERR_UNSUPPORTED_ENCRYPTION, ERR_UNSUPPORTED_FORMAT, ERR_WRITER_NOT_INITIALIZED, HttpRangeReader, HttpReader, Reader, SplitDataReader, SplitDataWriter, SplitZipReader, SplitZipWriter, TextReader, Uint8ArrayReader, Uint8ArrayWriter, Writer, ZipReaderStream, ZipWriter, ZipWriterStream, configure, fs, getMimeType, initShimAsyncCodec, terminateWorkers
 
 ;// CONCATENATED MODULE: ./node_modules/@zip.js/zip.js/lib/core/streams/codecs/deflate.js
 /*
@@ -48604,7 +48647,6 @@ function Deflate() {
 		}
 
 		// Copy as much as possible from input to output:
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			// Fill the win as much as possible:
 			if (lookahead <= 1) {
@@ -48699,7 +48741,6 @@ function Deflate() {
 
 			// We check for insufficient lookahead only every 8th comparison;
 			// the 256th check will be made at strstart+258.
-			// eslint-disable-next-line no-empty
 			do {
 				// empty block
 			} while (win[++scan] == win[++match] && win[++scan] == win[++match] && win[++scan] == win[++match]
@@ -48735,7 +48776,6 @@ function Deflate() {
 		let hash_head = 0; // head of the hash chain
 		let bflush; // set if current block must be flushed
 
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			// Make sure that we always have enough lookahead, except
 			// at the end of the input file. We need MAX_MATCH bytes
@@ -48842,7 +48882,6 @@ function Deflate() {
 		let max_insert;
 
 		// Process the input block.
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			// Make sure that we always have enough lookahead, except
 			// at the end of the input file. We need MAX_MATCH bytes
@@ -50195,7 +50234,6 @@ function InfCodes() {
 		m = q < s.read ? s.read - q - 1 : s.end - q;
 
 		// process input and output based on current state
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			switch (mode) {
 				// waiting for "i:"=input, "o:"=output, "x:"=nothing
@@ -50686,7 +50724,6 @@ function InfBlocks(z, w) {
 
 		// process input based on current state
 		// DEBUG dtree
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			let bl, bd, tl, td, bl_, bd_, tl_, td_;
 			switch (mode) {
@@ -50963,7 +51000,6 @@ function InfBlocks(z, w) {
 					mode = DTREE;
 				/* falls through */
 				case DTREE:
-					// eslint-disable-next-line no-constant-condition
 					while (true) {
 						t = table;
 						if (index >= 258 + (t & 0x1f) + ((t >> 5) & 0x1f)) {
@@ -51271,7 +51307,6 @@ function Inflate() {
 		const istate = z.istate;
 		f = f == inflate_Z_FINISH ? inflate_Z_BUF_ERROR : inflate_Z_OK;
 		r = inflate_Z_BUF_ERROR;
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			switch (istate.mode) {
 				case METHOD:
@@ -51653,6 +51688,9 @@ const BITFLAG_LEVEL = 0x06;
 const BITFLAG_DATA_DESCRIPTOR = 0x0008;
 const BITFLAG_LANG_ENCODING_FLAG = 0x0800;
 const FILE_ATTR_MSDOS_DIR_MASK = 0x10;
+const FILE_ATTR_UNIX_DIR_MASK =  0x4000;
+const FILE_ATTR_UNIX_EXECUTABLE_MASK = 0o111;
+const FILE_ATTR_UNIX_DEFAULT_MASK = 0o644;
 
 const VERSION_DEFLATE = 0x14;
 const VERSION_ZIP64 = 0x2D;
@@ -51762,7 +51800,8 @@ try {
 	if (typeof navigator != UNDEFINED_TYPE && navigator.hardwareConcurrency) {
 		maxWorkers = navigator.hardwareConcurrency;
 	}
-} catch (_error) {
+	// eslint-disable-next-line no-unused-vars
+} catch (_) {
 	// ignored
 }
 const DEFAULT_CONFIGURATION = {
@@ -51908,8 +51947,6 @@ function getMimeType() {
  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-// deno-lint-ignore-file no-prototype-builtins
 
 
 
@@ -53615,6 +53652,7 @@ class Crc32 {
 class Crc32Stream extends TransformStream {
 
 	constructor() {
+		// deno-lint-ignore prefer-const
 		let stream;
 		const crc32 = new Crc32();
 		super({
@@ -54601,7 +54639,6 @@ const SALT_LENGTH = [8, 12, 16];
 const KEY_LENGTH = [16, 24, 32];
 const SIGNATURE_LENGTH = 10;
 const COUNTER_DEFAULT_VALUE = [0, 0, 0, 0];
-// deno-lint-ignore valid-typeof
 const CRYPTO_API_SUPPORTED = typeof crypto != UNDEFINED_TYPE;
 const subtle = CRYPTO_API_SUPPORTED && crypto.subtle;
 const SUBTLE_API_SUPPORTED = CRYPTO_API_SUPPORTED && typeof subtle != UNDEFINED_TYPE;
@@ -54806,7 +54843,8 @@ async function importKey(format, password, algorithm, extractable, keyUsages) {
 	if (IMPORT_KEY_SUPPORTED) {
 		try {
 			return await subtle.importKey(format, password, algorithm, extractable, keyUsages);
-		} catch (_error) {
+			// eslint-disable-next-line no-unused-vars
+		} catch (_) {
 			IMPORT_KEY_SUPPORTED = false;
 			return misc.importKey(password);
 		}
@@ -54819,7 +54857,8 @@ async function deriveBits(algorithm, baseKey, length) {
 	if (DERIVE_BITS_SUPPORTED) {
 		try {
 			return await subtle.deriveBits(algorithm, baseKey, length);
-		} catch (_error) {
+			// eslint-disable-next-line no-unused-vars
+		} catch (_) {
 			DERIVE_BITS_SUPPORTED = false;
 			return misc.pbkdf2(baseKey, algorithm.salt, DERIVED_BITS_ALGORITHM.iterations, length);
 		}
@@ -55153,11 +55192,13 @@ function pipeThroughCommpressionStream(readable, useCompressionStream, options, 
 	try {
 		const CompressionStream = useCompressionStream && CodecStreamNative ? CodecStreamNative : CodecStream;
 		readable = pipeThrough(readable, new CompressionStream(COMPRESSION_FORMAT, options));
-	} catch (error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		if (useCompressionStream) {
 			try {
 				readable = pipeThrough(readable, new CodecStream(COMPRESSION_FORMAT, options));
-			} catch (error) {
+				// eslint-disable-next-line no-unused-vars
+			} catch (_) {
 				return readable;
 			}
 		} else {
@@ -55339,7 +55380,6 @@ class ChunkStream extends TransformStream {
 
 
 
-// deno-lint-ignore valid-typeof
 let WEB_WORKERS_SUPPORTED = typeof Worker != UNDEFINED_TYPE;
 
 
@@ -55419,7 +55459,8 @@ class ProgressWatcherStream extends TransformStream {
 async function callHandler(handler, ...parameters) {
 	try {
 		await handler(...parameters);
-	} catch (_error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		// ignored
 	}
 }
@@ -55436,7 +55477,8 @@ function createWebWorkerInterface(workerData, config) {
 		let worker;
 		try {
 			worker = getWebWorker(workerData.scripts[0], baseURL, workerData);
-		} catch (error) {
+			// eslint-disable-next-line no-unused-vars
+		} catch (_) {
 			WEB_WORKERS_SUPPORTED = false;
 			return createWorkerInterface(workerData, config);
 		}
@@ -55533,19 +55575,20 @@ let transferStreamsSupported = true;
 function getWebWorker(url, baseURL, workerData) {
 	const workerOptions = { type: "module" };
 	let scriptUrl, worker;
-	// deno-lint-ignore valid-typeof
 	if (typeof url == constants_FUNCTION_TYPE) {
 		url = url();
 	}
 	try {
 		scriptUrl = new URL(url, baseURL);
-	} catch (_error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		scriptUrl = url;
 	}
 	if (classicWorkersSupported) {
 		try {
 			worker = new Worker(scriptUrl);
-		} catch (_error) {
+			// eslint-disable-next-line no-unused-vars
+		} catch (_) {
 			classicWorkersSupported = false;
 			worker = new Worker(scriptUrl, workerOptions);
 		}
@@ -55558,7 +55601,7 @@ function getWebWorker(url, baseURL, workerData) {
 
 function sendMessage(message, { worker, writer, onTaskFinished, transferStreams }) {
 	try {
-		let { value, readable, writable } = message;
+		const { value, readable, writable } = message;
 		const transferables = [];
 		if (value) {
 			if (value.byteLength < value.buffer.byteLength) {
@@ -55583,7 +55626,8 @@ function sendMessage(message, { worker, writer, onTaskFinished, transferStreams 
 			try {
 				worker.postMessage(message, transferables);
 				return true;
-			} catch (_error) {
+				// eslint-disable-next-line no-unused-vars
+			} catch (_) {
 				transferStreamsSupported = false;
 				message.readable = message.writable = null;
 				worker.postMessage(message);
@@ -55693,6 +55737,7 @@ async function codec_pool_runWorker(stream, workerOptions) {
 	options.useCompressionStream = useCompressionStream || (useCompressionStream === constants_UNDEFINED_VALUE && config.useCompressionStream);
 	return (await getWorker()).run();
 
+	// deno-lint-ignore require-await
 	async function getWorker() {
 		const workerData = pool.find(workerData => !workerData.busy);
 		if (workerData) {
@@ -55732,7 +55777,8 @@ function terminateWorker(workerData, workerOptions) {
 				pool = pool.filter(data => data != workerData);
 				try {
 					await workerData.terminate();
-				} catch (_error) {
+					// eslint-disable-next-line no-unused-vars
+				} catch (_) {
 					// ignored
 				}
 			}, terminateWorkerTimeout);
@@ -55755,9 +55801,10 @@ async function terminateWorkers() {
 	}));
 }
 ;// CONCATENATED MODULE: ./node_modules/@zip.js/zip.js/lib/z-worker-inline.js
-function e(e,t={}){const n='const{Array:e,Object:t,Number:n,Math:r,Error:s,Uint8Array:i,Uint16Array:o,Uint32Array:c,Int32Array:f,Map:a,DataView:l,Promise:u,TextEncoder:w,crypto:h,postMessage:d,TransformStream:p,ReadableStream:y,WritableStream:m,CompressionStream:b,DecompressionStream:g}=self,k=void 0,v="undefined",S="function";class z{constructor(e){return class extends p{constructor(t,n){const r=new e(n);super({transform(e,t){t.enqueue(r.append(e))},flush(e){const t=r.flush();t&&e.enqueue(t)}})}}}}const C=[];for(let e=0;256>e;e++){let t=e;for(let e=0;8>e;e++)1&t?t=t>>>1^3988292384:t>>>=1;C[e]=t}class x{constructor(e){this.t=e||-1}append(e){let t=0|this.t;for(let n=0,r=0|e.length;r>n;n++)t=t>>>8^C[255&(t^e[n])];this.t=t}get(){return~this.t}}class A extends p{constructor(){let e;const t=new x;super({transform(e,n){t.append(e),n.enqueue(e)},flush(){const n=new i(4);new l(n.buffer).setUint32(0,t.get()),e.value=n}}),e=this}}const _={concat(e,t){if(0===e.length||0===t.length)return e.concat(t);const n=e[e.length-1],r=_.i(n);return 32===r?e.concat(t):_.o(t,r,0|n,e.slice(0,e.length-1))},l(e){const t=e.length;if(0===t)return 0;const n=e[t-1];return 32*(t-1)+_.i(n)},u(e,t){if(32*e.length<t)return e;const n=(e=e.slice(0,r.ceil(t/32))).length;return t&=31,n>0&&t&&(e[n-1]=_.h(t,e[n-1]&2147483648>>t-1,1)),e},h:(e,t,n)=>32===e?t:(n?0|t:t<<32-e)+1099511627776*e,i:e=>r.round(e/1099511627776)||32,o(e,t,n,r){for(void 0===r&&(r=[]);t>=32;t-=32)r.push(n),n=0;if(0===t)return r.concat(e);for(let s=0;s<e.length;s++)r.push(n|e[s]>>>t),n=e[s]<<32-t;const s=e.length?e[e.length-1]:0,i=_.i(s);return r.push(_.h(t+i&31,t+i>32?n:r.pop(),1)),r}},I={p:{m(e){const t=_.l(e)/8,n=new i(t);let r;for(let s=0;t>s;s++)3&s||(r=e[s/4]),n[s]=r>>>24,r<<=8;return n},k(e){const t=[];let n,r=0;for(n=0;n<e.length;n++)r=r<<8|e[n],3&~n||(t.push(r),r=0);return 3&n&&t.push(_.h(8*(3&n),r)),t}}},P=class{constructor(e){const t=this;t.blockSize=512,t.v=[1732584193,4023233417,2562383102,271733878,3285377520],t.S=[1518500249,1859775393,2400959708,3395469782],e?(t.C=e.C.slice(0),t.A=e.A.slice(0),t._=e._):t.reset()}reset(){const e=this;return e.C=e.v.slice(0),e.A=[],e._=0,e}update(e){const t=this;"string"==typeof e&&(e=I.I.k(e));const n=t.A=_.concat(t.A,e),r=t._,i=t._=r+_.l(e);if(i>9007199254740991)throw new s("Cannot hash more than 2^53 - 1 bits");const o=new c(n);let f=0;for(let e=t.blockSize+r-(t.blockSize+r&t.blockSize-1);i>=e;e+=t.blockSize)t.P(o.subarray(16*f,16*(f+1))),f+=1;return n.splice(0,16*f),t}D(){const e=this;let t=e.A;const n=e.C;t=_.concat(t,[_.h(1,1)]);for(let e=t.length+2;15&e;e++)t.push(0);for(t.push(r.floor(e._/4294967296)),t.push(0|e._);t.length;)e.P(t.splice(0,16));return e.reset(),n}V(e,t,n,r){return e>19?e>39?e>59?e>79?void 0:t^n^r:t&n|t&r|n&r:t^n^r:t&n|~t&r}R(e,t){return t<<e|t>>>32-e}P(t){const n=this,s=n.C,i=e(80);for(let e=0;16>e;e++)i[e]=t[e];let o=s[0],c=s[1],f=s[2],a=s[3],l=s[4];for(let e=0;79>=e;e++){16>e||(i[e]=n.R(1,i[e-3]^i[e-8]^i[e-14]^i[e-16]));const t=n.R(5,o)+n.V(e,c,f,a)+l+i[e]+n.S[r.floor(e/20)]|0;l=a,a=f,f=n.R(30,c),c=o,o=t}s[0]=s[0]+o|0,s[1]=s[1]+c|0,s[2]=s[2]+f|0,s[3]=s[3]+a|0,s[4]=s[4]+l|0}},D={getRandomValues(e){const t=new c(e.buffer),n=e=>{let t=987654321;const n=4294967295;return()=>(t=36969*(65535&t)+(t>>16)&n,(((t<<16)+(e=18e3*(65535&e)+(e>>16)&n)&n)/4294967296+.5)*(r.random()>.5?1:-1))};for(let s,i=0;i<e.length;i+=4){const e=n(4294967296*(s||r.random()));s=987654071*e(),t[i/4]=4294967296*e()|0}return e}},V={importKey:e=>new V.B(I.p.k(e)),M(e,t,n,r){if(n=n||1e4,0>r||0>n)throw new s("invalid params to pbkdf2");const i=1+(r>>5)<<2;let o,c,f,a,u;const w=new ArrayBuffer(i),h=new l(w);let d=0;const p=_;for(t=I.p.k(t),u=1;(i||1)>d;u++){for(o=c=e.encrypt(p.concat(t,[u])),f=1;n>f;f++)for(c=e.encrypt(c),a=0;a<c.length;a++)o[a]^=c[a];for(f=0;(i||1)>d&&f<o.length;f++)h.setInt32(d,o[f]),d+=4}return w.slice(0,r/8)},B:class{constructor(e){const t=this,n=t.U=P,r=[[],[]];t.K=[new n,new n];const s=t.K[0].blockSize/32;e.length>s&&(e=(new n).update(e).D());for(let t=0;s>t;t++)r[0][t]=909522486^e[t],r[1][t]=1549556828^e[t];t.K[0].update(r[0]),t.K[1].update(r[1]),t.N=new n(t.K[0])}reset(){const e=this;e.N=new e.U(e.K[0]),e.O=!1}update(e){this.O=!0,this.N.update(e)}digest(){const e=this,t=e.N.D(),n=new e.U(e.K[1]).update(t).D();return e.reset(),n}encrypt(e){if(this.O)throw new s("encrypt on already updated hmac called!");return this.update(e),this.digest(e)}}},R=typeof h!=v&&typeof h.getRandomValues==S,B="Invalid password",E="Invalid signature",M="zipjs-abort-check-password";function U(e){return R?h.getRandomValues(e):D.getRandomValues(e)}const K=16,N={name:"PBKDF2"},O=t.assign({hash:{name:"HMAC"}},N),T=t.assign({iterations:1e3,hash:{name:"SHA-1"}},N),W=["deriveBits"],j=[8,12,16],H=[16,24,32],L=10,F=[0,0,0,0],q=typeof h!=v,G=q&&h.subtle,J=q&&typeof G!=v,Q=I.p,X=class{constructor(e){const t=this;t.T=[[[],[],[],[],[]],[[],[],[],[],[]]],t.T[0][0][0]||t.W();const n=t.T[0][4],r=t.T[1],i=e.length;let o,c,f,a=1;if(4!==i&&6!==i&&8!==i)throw new s("invalid aes key size");for(t.S=[c=e.slice(0),f=[]],o=i;4*i+28>o;o++){let e=c[o-1];(o%i==0||8===i&&o%i==4)&&(e=n[e>>>24]<<24^n[e>>16&255]<<16^n[e>>8&255]<<8^n[255&e],o%i==0&&(e=e<<8^e>>>24^a<<24,a=a<<1^283*(a>>7))),c[o]=c[o-i]^e}for(let e=0;o;e++,o--){const t=c[3&e?o:o-4];f[e]=4>=o||4>e?t:r[0][n[t>>>24]]^r[1][n[t>>16&255]]^r[2][n[t>>8&255]]^r[3][n[255&t]]}}encrypt(e){return this.j(e,0)}decrypt(e){return this.j(e,1)}W(){const e=this.T[0],t=this.T[1],n=e[4],r=t[4],s=[],i=[];let o,c,f,a;for(let e=0;256>e;e++)i[(s[e]=e<<1^283*(e>>7))^e]=e;for(let l=o=0;!n[l];l^=c||1,o=i[o]||1){let i=o^o<<1^o<<2^o<<3^o<<4;i=i>>8^255&i^99,n[l]=i,r[i]=l,a=s[f=s[c=s[l]]];let u=16843009*a^65537*f^257*c^16843008*l,w=257*s[i]^16843008*i;for(let n=0;4>n;n++)e[n][l]=w=w<<24^w>>>8,t[n][i]=u=u<<24^u>>>8}for(let n=0;5>n;n++)e[n]=e[n].slice(0),t[n]=t[n].slice(0)}j(e,t){if(4!==e.length)throw new s("invalid aes block size");const n=this.S[t],r=n.length/4-2,i=[0,0,0,0],o=this.T[t],c=o[0],f=o[1],a=o[2],l=o[3],u=o[4];let w,h,d,p=e[0]^n[0],y=e[t?3:1]^n[1],m=e[2]^n[2],b=e[t?1:3]^n[3],g=4;for(let e=0;r>e;e++)w=c[p>>>24]^f[y>>16&255]^a[m>>8&255]^l[255&b]^n[g],h=c[y>>>24]^f[m>>16&255]^a[b>>8&255]^l[255&p]^n[g+1],d=c[m>>>24]^f[b>>16&255]^a[p>>8&255]^l[255&y]^n[g+2],b=c[b>>>24]^f[p>>16&255]^a[y>>8&255]^l[255&m]^n[g+3],g+=4,p=w,y=h,m=d;for(let e=0;4>e;e++)i[t?3&-e:e]=u[p>>>24]<<24^u[y>>16&255]<<16^u[m>>8&255]<<8^u[255&b]^n[g++],w=p,p=y,y=m,m=b,b=w;return i}},Y=class{constructor(e,t){this.H=e,this.L=t,this.F=t}reset(){this.F=this.L}update(e){return this.q(this.H,e,this.F)}G(e){if(255&~(e>>24))e+=1<<24;else{let t=e>>16&255,n=e>>8&255,r=255&e;255===t?(t=0,255===n?(n=0,255===r?r=0:++r):++n):++t,e=0,e+=t<<16,e+=n<<8,e+=r}return e}J(e){0===(e[0]=this.G(e[0]))&&(e[1]=this.G(e[1]))}q(e,t,n){let r;if(!(r=t.length))return[];const s=_.l(t);for(let s=0;r>s;s+=4){this.J(n);const r=e.encrypt(n);t[s]^=r[0],t[s+1]^=r[1],t[s+2]^=r[2],t[s+3]^=r[3]}return _.u(t,s)}},Z=V.B;let $=q&&J&&typeof G.importKey==S,ee=q&&J&&typeof G.deriveBits==S;class te extends p{constructor({password:e,rawPassword:n,signed:r,encryptionStrength:o,checkPasswordOnly:c}){super({start(){t.assign(this,{ready:new u((e=>this.X=e)),password:ie(e,n),signed:r,Y:o-1,pending:new i})},async transform(e,t){const n=this,{password:r,Y:o,X:f,ready:a}=n;r?(await(async(e,t,n,r)=>{const i=await se(e,t,n,ce(r,0,j[t])),o=ce(r,j[t]);if(i[0]!=o[0]||i[1]!=o[1])throw new s(B)})(n,o,r,ce(e,0,j[o]+2)),e=ce(e,j[o]+2),c?t.error(new s(M)):f()):await a;const l=new i(e.length-L-(e.length-L)%K);t.enqueue(re(n,e,l,0,L,!0))},async flush(e){const{signed:t,Z:n,$:r,pending:o,ready:c}=this;if(r&&n){await c;const f=ce(o,0,o.length-L),a=ce(o,o.length-L);let l=new i;if(f.length){const e=ae(Q,f);r.update(e);const t=n.update(e);l=fe(Q,t)}if(t){const e=ce(fe(Q,r.digest()),0,L);for(let t=0;L>t;t++)if(e[t]!=a[t])throw new s(E)}e.enqueue(l)}}})}}class ne extends p{constructor({password:e,rawPassword:n,encryptionStrength:r}){let s;super({start(){t.assign(this,{ready:new u((e=>this.X=e)),password:ie(e,n),Y:r-1,pending:new i})},async transform(e,t){const n=this,{password:r,Y:s,X:o,ready:c}=n;let f=new i;r?(f=await(async(e,t,n)=>{const r=U(new i(j[t]));return oe(r,await se(e,t,n,r))})(n,s,r),o()):await c;const a=new i(f.length+e.length-e.length%K);a.set(f,0),t.enqueue(re(n,e,a,f.length,0))},async flush(e){const{Z:t,$:n,pending:r,ready:o}=this;if(n&&t){await o;let c=new i;if(r.length){const e=t.update(ae(Q,r));n.update(e),c=fe(Q,e)}s.signature=fe(Q,n.digest()).slice(0,L),e.enqueue(oe(c,s.signature))}}}),s=this}}function re(e,t,n,r,s,o){const{Z:c,$:f,pending:a}=e,l=t.length-s;let u;for(a.length&&(t=oe(a,t),n=((e,t)=>{if(t&&t>e.length){const n=e;(e=new i(t)).set(n,0)}return e})(n,l-l%K)),u=0;l-K>=u;u+=K){const e=ae(Q,ce(t,u,u+K));o&&f.update(e);const s=c.update(e);o||f.update(s),n.set(fe(Q,s),u+r)}return e.pending=ce(t,u),n}async function se(n,r,s,o){n.password=null;const c=await(async(e,t,n,r,s)=>{if(!$)return V.importKey(t);try{return await G.importKey("raw",t,n,!1,s)}catch(e){return $=!1,V.importKey(t)}})(0,s,O,0,W),f=await(async(e,t,n)=>{if(!ee)return V.M(t,e.salt,T.iterations,n);try{return await G.deriveBits(e,t,n)}catch(r){return ee=!1,V.M(t,e.salt,T.iterations,n)}})(t.assign({salt:o},T),c,8*(2*H[r]+2)),a=new i(f),l=ae(Q,ce(a,0,H[r])),u=ae(Q,ce(a,H[r],2*H[r])),w=ce(a,2*H[r]);return t.assign(n,{keys:{key:l,ee:u,passwordVerification:w},Z:new Y(new X(l),e.from(F)),$:new Z(u)}),w}function ie(e,t){return t===k?(e=>{if(typeof w==v){const t=new i((e=unescape(encodeURIComponent(e))).length);for(let n=0;n<t.length;n++)t[n]=e.charCodeAt(n);return t}return(new w).encode(e)})(e):t}function oe(e,t){let n=e;return e.length+t.length&&(n=new i(e.length+t.length),n.set(e,0),n.set(t,e.length)),n}function ce(e,t,n){return e.subarray(t,n)}function fe(e,t){return e.m(t)}function ae(e,t){return e.k(t)}class le extends p{constructor({password:e,passwordVerification:n,checkPasswordOnly:r}){super({start(){t.assign(this,{password:e,passwordVerification:n}),de(this,e)},transform(e,t){const n=this;if(n.password){const t=we(n,e.subarray(0,12));if(n.password=null,t[11]!=n.passwordVerification)throw new s(B);e=e.subarray(12)}r?t.error(new s(M)):t.enqueue(we(n,e))}})}}class ue extends p{constructor({password:e,passwordVerification:n}){super({start(){t.assign(this,{password:e,passwordVerification:n}),de(this,e)},transform(e,t){const n=this;let r,s;if(n.password){n.password=null;const t=U(new i(12));t[11]=n.passwordVerification,r=new i(e.length+t.length),r.set(he(n,t),0),s=12}else r=new i(e.length),s=0;r.set(he(n,e),s),t.enqueue(r)}})}}function we(e,t){const n=new i(t.length);for(let r=0;r<t.length;r++)n[r]=ye(e)^t[r],pe(e,n[r]);return n}function he(e,t){const n=new i(t.length);for(let r=0;r<t.length;r++)n[r]=ye(e)^t[r],pe(e,t[r]);return n}function de(e,n){const r=[305419896,591751049,878082192];t.assign(e,{keys:r,te:new x(r[0]),ne:new x(r[2])});for(let t=0;t<n.length;t++)pe(e,n.charCodeAt(t))}function pe(e,t){let[n,s,i]=e.keys;e.te.append([t]),n=~e.te.get(),s=be(r.imul(be(s+me(n)),134775813)+1),e.ne.append([s>>>24]),i=~e.ne.get(),e.keys=[n,s,i]}function ye(e){const t=2|e.keys[2];return me(r.imul(t,1^t)>>>8)}function me(e){return 255&e}function be(e){return 4294967295&e}const ge="deflate-raw";class ke extends p{constructor(e,{chunkSize:t,CompressionStream:n,CompressionStreamNative:r}){super({});const{compressed:s,encrypted:i,useCompressionStream:o,zipCrypto:c,signed:f,level:a}=e,u=this;let w,h,d=Se(super.readable);i&&!c||!f||(w=new A,d=xe(d,w)),s&&(d=Ce(d,o,{level:a,chunkSize:t},r,n)),i&&(c?d=xe(d,new ue(e)):(h=new ne(e),d=xe(d,h))),ze(u,d,(()=>{let e;i&&!c&&(e=h.signature),i&&!c||!f||(e=new l(w.value.buffer).getUint32(0)),u.signature=e}))}}class ve extends p{constructor(e,{chunkSize:t,DecompressionStream:n,DecompressionStreamNative:r}){super({});const{zipCrypto:i,encrypted:o,signed:c,signature:f,compressed:a,useCompressionStream:u}=e;let w,h,d=Se(super.readable);o&&(i?d=xe(d,new le(e)):(h=new te(e),d=xe(d,h))),a&&(d=Ce(d,u,{chunkSize:t},r,n)),o&&!i||!c||(w=new A,d=xe(d,w)),ze(this,d,(()=>{if((!o||i)&&c){const e=new l(w.value.buffer);if(f!=e.getUint32(0,!1))throw new s(E)}}))}}function Se(e){return xe(e,new p({transform(e,t){e&&e.length&&t.enqueue(e)}}))}function ze(e,n,r){n=xe(n,new p({flush:r})),t.defineProperty(e,"readable",{get:()=>n})}function Ce(e,t,n,r,s){try{e=xe(e,new(t&&r?r:s)(ge,n))}catch(r){if(!t)return e;try{e=xe(e,new s(ge,n))}catch(t){return e}}return e}function xe(e,t){return e.pipeThrough(t)}const Ae="data",_e="close";class Ie extends p{constructor(e,n){super({});const r=this,{codecType:s}=e;let i;s.startsWith("deflate")?i=ke:s.startsWith("inflate")&&(i=ve);let o=0,c=0;const f=new i(e,n),a=super.readable,l=new p({transform(e,t){e&&e.length&&(c+=e.length,t.enqueue(e))},flush(){t.assign(r,{inputSize:c})}}),u=new p({transform(e,t){e&&e.length&&(o+=e.length,t.enqueue(e))},flush(){const{signature:e}=f;t.assign(r,{signature:e,outputSize:o,inputSize:c})}});t.defineProperty(r,"readable",{get:()=>a.pipeThrough(l).pipeThrough(f).pipeThrough(u)})}}class Pe extends p{constructor(e){let t;super({transform:function n(r,s){if(t){const e=new i(t.length+r.length);e.set(t),e.set(r,t.length),r=e,t=null}r.length>e?(s.enqueue(r.slice(0,e)),n(r.slice(e),s)):t=r},flush(e){t&&t.length&&e.enqueue(t)}})}}const De=new a,Ve=new a;let Re,Be=0,Ee=!0;async function Me(e){try{const{options:t,scripts:r,config:s}=e;if(r&&r.length)try{Ee?importScripts.apply(k,r):await Ue(r)}catch(e){Ee=!1,await Ue(r)}self.initCodec&&self.initCodec(),s.CompressionStreamNative=self.CompressionStream,s.DecompressionStreamNative=self.DecompressionStream,self.Deflate&&(s.CompressionStream=new z(self.Deflate)),self.Inflate&&(s.DecompressionStream=new z(self.Inflate));const i={highWaterMark:1},o=e.readable||new y({async pull(e){const t=new u((e=>De.set(Be,e)));Ke({type:"pull",messageId:Be}),Be=(Be+1)%n.MAX_SAFE_INTEGER;const{value:r,done:s}=await t;e.enqueue(r),s&&e.close()}},i),c=e.writable||new m({async write(e){let t;const r=new u((e=>t=e));Ve.set(Be,t),Ke({type:Ae,value:e,messageId:Be}),Be=(Be+1)%n.MAX_SAFE_INTEGER,await r}},i),f=new Ie(t,s);Re=new AbortController;const{signal:a}=Re;await o.pipeThrough(f).pipeThrough(new Pe(s.chunkSize)).pipeTo(c,{signal:a,preventClose:!0,preventAbort:!0}),await c.getWriter().close();const{signature:l,inputSize:w,outputSize:h}=f;Ke({type:_e,result:{signature:l,inputSize:w,outputSize:h}})}catch(e){Ne(e)}}async function Ue(e){for(const t of e)await import(t)}function Ke(e){let{value:t}=e;if(t)if(t.length)try{t=new i(t),e.value=t.buffer,d(e,[e.value])}catch(t){d(e)}else d(e);else d(e)}function Ne(e=new s("Unknown error")){const{message:t,stack:n,code:r,name:i}=e;d({error:{message:t,stack:n,code:r,name:i}})}addEventListener("message",(({data:e})=>{const{type:t,messageId:n,value:r,done:s}=e;try{if("start"==t&&Me(e),t==Ae){const e=De.get(n);De.delete(n),e({value:new i(r),done:s})}if("ack"==t){const e=Ve.get(n);Ve.delete(n),e()}t==_e&&Re.abort()}catch(e){Ne(e)}}));const Oe=-2;function Te(t){return We(t.map((([t,n])=>new e(t).fill(n,0,t))))}function We(t){return t.reduce(((t,n)=>t.concat(e.isArray(n)?We(n):n)),[])}const je=[0,1,2,3].concat(...Te([[2,4],[2,5],[4,6],[4,7],[8,8],[8,9],[16,10],[16,11],[32,12],[32,13],[64,14],[64,15],[2,0],[1,16],[1,17],[2,18],[2,19],[4,20],[4,21],[8,22],[8,23],[16,24],[16,25],[32,26],[32,27],[64,28],[64,29]]));function He(){const e=this;function t(e,t){let n=0;do{n|=1&e,e>>>=1,n<<=1}while(--t>0);return n>>>1}e.re=n=>{const s=e.se,i=e.oe.ie,o=e.oe.ce;let c,f,a,l=-1;for(n.fe=0,n.ae=573,c=0;o>c;c++)0!==s[2*c]?(n.le[++n.fe]=l=c,n.ue[c]=0):s[2*c+1]=0;for(;2>n.fe;)a=n.le[++n.fe]=2>l?++l:0,s[2*a]=1,n.ue[a]=0,n.we--,i&&(n.he-=i[2*a+1]);for(e.de=l,c=r.floor(n.fe/2);c>=1;c--)n.pe(s,c);a=o;do{c=n.le[1],n.le[1]=n.le[n.fe--],n.pe(s,1),f=n.le[1],n.le[--n.ae]=c,n.le[--n.ae]=f,s[2*a]=s[2*c]+s[2*f],n.ue[a]=r.max(n.ue[c],n.ue[f])+1,s[2*c+1]=s[2*f+1]=a,n.le[1]=a++,n.pe(s,1)}while(n.fe>=2);n.le[--n.ae]=n.le[1],(t=>{const n=e.se,r=e.oe.ie,s=e.oe.ye,i=e.oe.me,o=e.oe.be;let c,f,a,l,u,w,h=0;for(l=0;15>=l;l++)t.ge[l]=0;for(n[2*t.le[t.ae]+1]=0,c=t.ae+1;573>c;c++)f=t.le[c],l=n[2*n[2*f+1]+1]+1,l>o&&(l=o,h++),n[2*f+1]=l,f>e.de||(t.ge[l]++,u=0,i>f||(u=s[f-i]),w=n[2*f],t.we+=w*(l+u),r&&(t.he+=w*(r[2*f+1]+u)));if(0!==h){do{for(l=o-1;0===t.ge[l];)l--;t.ge[l]--,t.ge[l+1]+=2,t.ge[o]--,h-=2}while(h>0);for(l=o;0!==l;l--)for(f=t.ge[l];0!==f;)a=t.le[--c],a>e.de||(n[2*a+1]!=l&&(t.we+=(l-n[2*a+1])*n[2*a],n[2*a+1]=l),f--)}})(n),((e,n,r)=>{const s=[];let i,o,c,f=0;for(i=1;15>=i;i++)s[i]=f=f+r[i-1]<<1;for(o=0;n>=o;o++)c=e[2*o+1],0!==c&&(e[2*o]=t(s[c]++,c))})(s,e.de,n.ge)}}function Le(e,t,n,r,s){const i=this;i.ie=e,i.ye=t,i.me=n,i.ce=r,i.be=s}He.ke=[0,1,2,3,4,5,6,7].concat(...Te([[2,8],[2,9],[2,10],[2,11],[4,12],[4,13],[4,14],[4,15],[8,16],[8,17],[8,18],[8,19],[16,20],[16,21],[16,22],[16,23],[32,24],[32,25],[32,26],[31,27],[1,28]])),He.ve=[0,1,2,3,4,5,6,7,8,10,12,14,16,20,24,28,32,40,48,56,64,80,96,112,128,160,192,224,0],He.Se=[0,1,2,3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024,1536,2048,3072,4096,6144,8192,12288,16384,24576],He.ze=e=>256>e?je[e]:je[256+(e>>>7)],He.Ce=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],He.xe=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13],He.Ae=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,3,7],He._e=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];const Fe=Te([[144,8],[112,9],[24,7],[8,8]]);Le.Ie=We([12,140,76,204,44,172,108,236,28,156,92,220,60,188,124,252,2,130,66,194,34,162,98,226,18,146,82,210,50,178,114,242,10,138,74,202,42,170,106,234,26,154,90,218,58,186,122,250,6,134,70,198,38,166,102,230,22,150,86,214,54,182,118,246,14,142,78,206,46,174,110,238,30,158,94,222,62,190,126,254,1,129,65,193,33,161,97,225,17,145,81,209,49,177,113,241,9,137,73,201,41,169,105,233,25,153,89,217,57,185,121,249,5,133,69,197,37,165,101,229,21,149,85,213,53,181,117,245,13,141,77,205,45,173,109,237,29,157,93,221,61,189,125,253,19,275,147,403,83,339,211,467,51,307,179,435,115,371,243,499,11,267,139,395,75,331,203,459,43,299,171,427,107,363,235,491,27,283,155,411,91,347,219,475,59,315,187,443,123,379,251,507,7,263,135,391,71,327,199,455,39,295,167,423,103,359,231,487,23,279,151,407,87,343,215,471,55,311,183,439,119,375,247,503,15,271,143,399,79,335,207,463,47,303,175,431,111,367,239,495,31,287,159,415,95,351,223,479,63,319,191,447,127,383,255,511,0,64,32,96,16,80,48,112,8,72,40,104,24,88,56,120,4,68,36,100,20,84,52,116,3,131,67,195,35,163,99,227].map(((e,t)=>[e,Fe[t]])));const qe=Te([[30,5]]);function Ge(e,t,n,r,s){const i=this;i.Pe=e,i.De=t,i.Ve=n,i.Re=r,i.Be=s}Le.Ee=We([0,16,8,24,4,20,12,28,2,18,10,26,6,22,14,30,1,17,9,25,5,21,13,29,3,19,11,27,7,23].map(((e,t)=>[e,qe[t]]))),Le.Me=new Le(Le.Ie,He.Ce,257,286,15),Le.Ue=new Le(Le.Ee,He.xe,0,30,15),Le.Ke=new Le(null,He.Ae,0,19,7);const Je=[new Ge(0,0,0,0,0),new Ge(4,4,8,4,1),new Ge(4,5,16,8,1),new Ge(4,6,32,32,1),new Ge(4,4,16,16,2),new Ge(8,16,32,32,2),new Ge(8,16,128,128,2),new Ge(8,32,128,256,2),new Ge(32,128,258,1024,2),new Ge(32,258,258,4096,2)],Qe=["need dictionary","stream end","","","stream error","data error","","buffer error","",""],Xe=113,Ye=666,Ze=262;function $e(e,t,n,r){const s=e[2*t],i=e[2*n];return i>s||s==i&&r[t]<=r[n]}function et(){const e=this;let t,n,s,c,f,a,l,u,w,h,d,p,y,m,b,g,k,v,S,z,C,x,A,_,I,P,D,V,R,B,E,M,U;const K=new He,N=new He,O=new He;let T,W,j,H,L,F;function q(){let t;for(t=0;286>t;t++)E[2*t]=0;for(t=0;30>t;t++)M[2*t]=0;for(t=0;19>t;t++)U[2*t]=0;E[512]=1,e.we=e.he=0,W=j=0}function G(e,t){let n,r=-1,s=e[1],i=0,o=7,c=4;0===s&&(o=138,c=3),e[2*(t+1)+1]=65535;for(let f=0;t>=f;f++)n=s,s=e[2*(f+1)+1],++i<o&&n==s||(c>i?U[2*n]+=i:0!==n?(n!=r&&U[2*n]++,U[32]++):i>10?U[36]++:U[34]++,i=0,r=n,0===s?(o=138,c=3):n==s?(o=6,c=3):(o=7,c=4))}function J(t){e.Ne[e.pending++]=t}function Q(e){J(255&e),J(e>>>8&255)}function X(e,t){let n;const r=t;F>16-r?(n=e,L|=n<<F&65535,Q(L),L=n>>>16-F,F+=r-16):(L|=e<<F&65535,F+=r)}function Y(e,t){const n=2*e;X(65535&t[n],65535&t[n+1])}function Z(e,t){let n,r,s=-1,i=e[1],o=0,c=7,f=4;for(0===i&&(c=138,f=3),n=0;t>=n;n++)if(r=i,i=e[2*(n+1)+1],++o>=c||r!=i){if(f>o)do{Y(r,U)}while(0!=--o);else 0!==r?(r!=s&&(Y(r,U),o--),Y(16,U),X(o-3,2)):o>10?(Y(18,U),X(o-11,7)):(Y(17,U),X(o-3,3));o=0,s=r,0===i?(c=138,f=3):r==i?(c=6,f=3):(c=7,f=4)}}function $(){16==F?(Q(L),L=0,F=0):8>F||(J(255&L),L>>>=8,F-=8)}function ee(t,n){let s,i,o;if(e.Oe[W]=t,e.Te[W]=255&n,W++,0===t?E[2*n]++:(j++,t--,E[2*(He.ke[n]+256+1)]++,M[2*He.ze(t)]++),!(8191&W)&&D>2){for(s=8*W,i=C-k,o=0;30>o;o++)s+=M[2*o]*(5+He.xe[o]);if(s>>>=3,j<r.floor(W/2)&&s<r.floor(i/2))return!0}return W==T-1}function te(t,n){let r,s,i,o,c=0;if(0!==W)do{r=e.Oe[c],s=e.Te[c],c++,0===r?Y(s,t):(i=He.ke[s],Y(i+256+1,t),o=He.Ce[i],0!==o&&(s-=He.ve[i],X(s,o)),r--,i=He.ze(r),Y(i,n),o=He.xe[i],0!==o&&(r-=He.Se[i],X(r,o)))}while(W>c);Y(256,t),H=t[513]}function ne(){F>8?Q(L):F>0&&J(255&L),L=0,F=0}function re(t,n,r){X(0+(r?1:0),3),((t,n)=>{ne(),H=8,Q(n),Q(~n),e.Ne.set(u.subarray(t,t+n),e.pending),e.pending+=n})(t,n)}function se(n){((t,n,r)=>{let s,i,o=0;D>0?(K.re(e),N.re(e),o=(()=>{let t;for(G(E,K.de),G(M,N.de),O.re(e),t=18;t>=3&&0===U[2*He._e[t]+1];t--);return e.we+=14+3*(t+1),t})(),s=e.we+3+7>>>3,i=e.he+3+7>>>3,i>s||(s=i)):s=i=n+5,n+4>s||-1==t?i==s?(X(2+(r?1:0),3),te(Le.Ie,Le.Ee)):(X(4+(r?1:0),3),((e,t,n)=>{let r;for(X(e-257,5),X(t-1,5),X(n-4,4),r=0;n>r;r++)X(U[2*He._e[r]+1],3);Z(E,e-1),Z(M,t-1)})(K.de+1,N.de+1,o+1),te(E,M)):re(t,n,r),q(),r&&ne()})(0>k?-1:k,C-k,n),k=C,t.We()}function ie(){let e,n,r,s;do{if(s=w-A-C,0===s&&0===C&&0===A)s=f;else if(-1==s)s--;else if(C>=f+f-Ze){u.set(u.subarray(f,f+f),0),x-=f,C-=f,k-=f,e=y,r=e;do{n=65535&d[--r],d[r]=f>n?0:n-f}while(0!=--e);e=f,r=e;do{n=65535&h[--r],h[r]=f>n?0:n-f}while(0!=--e);s+=f}if(0===t.je)return;e=t.He(u,C+A,s),A+=e,3>A||(p=255&u[C],p=(p<<g^255&u[C+1])&b)}while(Ze>A&&0!==t.je)}function oe(e){let t,n,r=I,s=C,i=_;const o=C>f-Ze?C-(f-Ze):0;let c=B;const a=l,w=C+258;let d=u[s+i-1],p=u[s+i];R>_||(r>>=2),c>A&&(c=A);do{if(t=e,u[t+i]==p&&u[t+i-1]==d&&u[t]==u[s]&&u[++t]==u[s+1]){s+=2,t++;do{}while(u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&w>s);if(n=258-(w-s),s=w-258,n>i){if(x=e,i=n,n>=c)break;d=u[s+i-1],p=u[s+i]}}}while((e=65535&h[e&a])>o&&0!=--r);return i>A?A:i}e.ue=[],e.ge=[],e.le=[],E=[],M=[],U=[],e.pe=(t,n)=>{const r=e.le,s=r[n];let i=n<<1;for(;i<=e.fe&&(i<e.fe&&$e(t,r[i+1],r[i],e.ue)&&i++,!$e(t,s,r[i],e.ue));)r[n]=r[i],n=i,i<<=1;r[n]=s},e.Le=(t,S,x,W,j,G)=>(W||(W=8),j||(j=8),G||(G=0),t.Fe=null,-1==S&&(S=6),1>j||j>9||8!=W||9>x||x>15||0>S||S>9||0>G||G>2?Oe:(t.qe=e,a=x,f=1<<a,l=f-1,m=j+7,y=1<<m,b=y-1,g=r.floor((m+3-1)/3),u=new i(2*f),h=[],d=[],T=1<<j+6,e.Ne=new i(4*T),s=4*T,e.Oe=new o(T),e.Te=new i(T),D=S,V=G,(t=>(t.Ge=t.Je=0,t.Fe=null,e.pending=0,e.Qe=0,n=Xe,c=0,K.se=E,K.oe=Le.Me,N.se=M,N.oe=Le.Ue,O.se=U,O.oe=Le.Ke,L=0,F=0,H=8,q(),(()=>{w=2*f,d[y-1]=0;for(let e=0;y-1>e;e++)d[e]=0;P=Je[D].De,R=Je[D].Pe,B=Je[D].Ve,I=Je[D].Re,C=0,k=0,A=0,v=_=2,z=0,p=0})(),0))(t))),e.Xe=()=>42!=n&&n!=Xe&&n!=Ye?Oe:(e.Te=null,e.Oe=null,e.Ne=null,d=null,h=null,u=null,e.qe=null,n==Xe?-3:0),e.Ye=(e,t,n)=>{let r=0;return-1==t&&(t=6),0>t||t>9||0>n||n>2?Oe:(Je[D].Be!=Je[t].Be&&0!==e.Ge&&(r=e.Ze(1)),D!=t&&(D=t,P=Je[D].De,R=Je[D].Pe,B=Je[D].Ve,I=Je[D].Re),V=n,r)},e.$e=(e,t,r)=>{let s,i=r,o=0;if(!t||42!=n)return Oe;if(3>i)return 0;for(i>f-Ze&&(i=f-Ze,o=r-i),u.set(t.subarray(o,o+i),0),C=i,k=i,p=255&u[0],p=(p<<g^255&u[1])&b,s=0;i-3>=s;s++)p=(p<<g^255&u[s+2])&b,h[s&l]=d[p],d[p]=s;return 0},e.Ze=(r,i)=>{let o,w,m,I,R;if(i>4||0>i)return Oe;if(!r.et||!r.tt&&0!==r.je||n==Ye&&4!=i)return r.Fe=Qe[4],Oe;if(0===r.nt)return r.Fe=Qe[7],-5;var B;if(t=r,I=c,c=i,42==n&&(w=8+(a-8<<4)<<8,m=(D-1&255)>>1,m>3&&(m=3),w|=m<<6,0!==C&&(w|=32),w+=31-w%31,n=Xe,J((B=w)>>8&255),J(255&B)),0!==e.pending){if(t.We(),0===t.nt)return c=-1,0}else if(0===t.je&&I>=i&&4!=i)return t.Fe=Qe[7],-5;if(n==Ye&&0!==t.je)return r.Fe=Qe[7],-5;if(0!==t.je||0!==A||0!=i&&n!=Ye){switch(R=-1,Je[D].Be){case 0:R=(e=>{let n,r=65535;for(r>s-5&&(r=s-5);;){if(1>=A){if(ie(),0===A&&0==e)return 0;if(0===A)break}if(C+=A,A=0,n=k+r,(0===C||C>=n)&&(A=C-n,C=n,se(!1),0===t.nt))return 0;if(C-k>=f-Ze&&(se(!1),0===t.nt))return 0}return se(4==e),0===t.nt?4==e?2:0:4==e?3:1})(i);break;case 1:R=(e=>{let n,r=0;for(;;){if(Ze>A){if(ie(),Ze>A&&0==e)return 0;if(0===A)break}if(3>A||(p=(p<<g^255&u[C+2])&b,r=65535&d[p],h[C&l]=d[p],d[p]=C),0===r||(C-r&65535)>f-Ze||2!=V&&(v=oe(r)),3>v)n=ee(0,255&u[C]),A--,C++;else if(n=ee(C-x,v-3),A-=v,v>P||3>A)C+=v,v=0,p=255&u[C],p=(p<<g^255&u[C+1])&b;else{v--;do{C++,p=(p<<g^255&u[C+2])&b,r=65535&d[p],h[C&l]=d[p],d[p]=C}while(0!=--v);C++}if(n&&(se(!1),0===t.nt))return 0}return se(4==e),0===t.nt?4==e?2:0:4==e?3:1})(i);break;case 2:R=(e=>{let n,r,s=0;for(;;){if(Ze>A){if(ie(),Ze>A&&0==e)return 0;if(0===A)break}if(3>A||(p=(p<<g^255&u[C+2])&b,s=65535&d[p],h[C&l]=d[p],d[p]=C),_=v,S=x,v=2,0!==s&&P>_&&f-Ze>=(C-s&65535)&&(2!=V&&(v=oe(s)),5>=v&&(1==V||3==v&&C-x>4096)&&(v=2)),3>_||v>_)if(0!==z){if(n=ee(0,255&u[C-1]),n&&se(!1),C++,A--,0===t.nt)return 0}else z=1,C++,A--;else{r=C+A-3,n=ee(C-1-S,_-3),A-=_-1,_-=2;do{++C>r||(p=(p<<g^255&u[C+2])&b,s=65535&d[p],h[C&l]=d[p],d[p]=C)}while(0!=--_);if(z=0,v=2,C++,n&&(se(!1),0===t.nt))return 0}}return 0!==z&&(n=ee(0,255&u[C-1]),z=0),se(4==e),0===t.nt?4==e?2:0:4==e?3:1})(i)}if(2!=R&&3!=R||(n=Ye),0==R||2==R)return 0===t.nt&&(c=-1),0;if(1==R){if(1==i)X(2,3),Y(256,Le.Ie),$(),9>1+H+10-F&&(X(2,3),Y(256,Le.Ie),$()),H=7;else if(re(0,0,!1),3==i)for(o=0;y>o;o++)d[o]=0;if(t.We(),0===t.nt)return c=-1,0}}return 4!=i?0:1}}function tt(){const e=this;e.rt=0,e.st=0,e.je=0,e.Ge=0,e.nt=0,e.Je=0}function nt(e){const t=new tt,n=(o=e&&e.chunkSize?e.chunkSize:65536)+5*(r.floor(o/16383)+1);var o;const c=new i(n);let f=e?e.level:-1;void 0===f&&(f=-1),t.Le(f),t.et=c,this.append=(e,r)=>{let o,f,a=0,l=0,u=0;const w=[];if(e.length){t.rt=0,t.tt=e,t.je=e.length;do{if(t.st=0,t.nt=n,o=t.Ze(0),0!=o)throw new s("deflating: "+t.Fe);t.st&&(t.st==n?w.push(new i(c)):w.push(c.subarray(0,t.st))),u+=t.st,r&&t.rt>0&&t.rt!=a&&(r(t.rt),a=t.rt)}while(t.je>0||0===t.nt);return w.length>1?(f=new i(u),w.forEach((e=>{f.set(e,l),l+=e.length}))):f=w[0]?new i(w[0]):new i,f}},this.flush=()=>{let e,r,o=0,f=0;const a=[];do{if(t.st=0,t.nt=n,e=t.Ze(4),1!=e&&0!=e)throw new s("deflating: "+t.Fe);n-t.nt>0&&a.push(c.slice(0,t.st)),f+=t.st}while(t.je>0||0===t.nt);return t.Xe(),r=new i(f),a.forEach((e=>{r.set(e,o),o+=e.length})),r}}tt.prototype={Le(e,t){const n=this;return n.qe=new et,t||(t=15),n.qe.Le(n,e,t)},Ze(e){const t=this;return t.qe?t.qe.Ze(t,e):Oe},Xe(){const e=this;if(!e.qe)return Oe;const t=e.qe.Xe();return e.qe=null,t},Ye(e,t){const n=this;return n.qe?n.qe.Ye(n,e,t):Oe},$e(e,t){const n=this;return n.qe?n.qe.$e(n,e,t):Oe},He(e,t,n){const r=this;let s=r.je;return s>n&&(s=n),0===s?0:(r.je-=s,e.set(r.tt.subarray(r.rt,r.rt+s),t),r.rt+=s,r.Ge+=s,s)},We(){const e=this;let t=e.qe.pending;t>e.nt&&(t=e.nt),0!==t&&(e.et.set(e.qe.Ne.subarray(e.qe.Qe,e.qe.Qe+t),e.st),e.st+=t,e.qe.Qe+=t,e.Je+=t,e.nt-=t,e.qe.pending-=t,0===e.qe.pending&&(e.qe.Qe=0))}};const rt=-2,st=-3,it=-5,ot=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535],ct=[96,7,256,0,8,80,0,8,16,84,8,115,82,7,31,0,8,112,0,8,48,0,9,192,80,7,10,0,8,96,0,8,32,0,9,160,0,8,0,0,8,128,0,8,64,0,9,224,80,7,6,0,8,88,0,8,24,0,9,144,83,7,59,0,8,120,0,8,56,0,9,208,81,7,17,0,8,104,0,8,40,0,9,176,0,8,8,0,8,136,0,8,72,0,9,240,80,7,4,0,8,84,0,8,20,85,8,227,83,7,43,0,8,116,0,8,52,0,9,200,81,7,13,0,8,100,0,8,36,0,9,168,0,8,4,0,8,132,0,8,68,0,9,232,80,7,8,0,8,92,0,8,28,0,9,152,84,7,83,0,8,124,0,8,60,0,9,216,82,7,23,0,8,108,0,8,44,0,9,184,0,8,12,0,8,140,0,8,76,0,9,248,80,7,3,0,8,82,0,8,18,85,8,163,83,7,35,0,8,114,0,8,50,0,9,196,81,7,11,0,8,98,0,8,34,0,9,164,0,8,2,0,8,130,0,8,66,0,9,228,80,7,7,0,8,90,0,8,26,0,9,148,84,7,67,0,8,122,0,8,58,0,9,212,82,7,19,0,8,106,0,8,42,0,9,180,0,8,10,0,8,138,0,8,74,0,9,244,80,7,5,0,8,86,0,8,22,192,8,0,83,7,51,0,8,118,0,8,54,0,9,204,81,7,15,0,8,102,0,8,38,0,9,172,0,8,6,0,8,134,0,8,70,0,9,236,80,7,9,0,8,94,0,8,30,0,9,156,84,7,99,0,8,126,0,8,62,0,9,220,82,7,27,0,8,110,0,8,46,0,9,188,0,8,14,0,8,142,0,8,78,0,9,252,96,7,256,0,8,81,0,8,17,85,8,131,82,7,31,0,8,113,0,8,49,0,9,194,80,7,10,0,8,97,0,8,33,0,9,162,0,8,1,0,8,129,0,8,65,0,9,226,80,7,6,0,8,89,0,8,25,0,9,146,83,7,59,0,8,121,0,8,57,0,9,210,81,7,17,0,8,105,0,8,41,0,9,178,0,8,9,0,8,137,0,8,73,0,9,242,80,7,4,0,8,85,0,8,21,80,8,258,83,7,43,0,8,117,0,8,53,0,9,202,81,7,13,0,8,101,0,8,37,0,9,170,0,8,5,0,8,133,0,8,69,0,9,234,80,7,8,0,8,93,0,8,29,0,9,154,84,7,83,0,8,125,0,8,61,0,9,218,82,7,23,0,8,109,0,8,45,0,9,186,0,8,13,0,8,141,0,8,77,0,9,250,80,7,3,0,8,83,0,8,19,85,8,195,83,7,35,0,8,115,0,8,51,0,9,198,81,7,11,0,8,99,0,8,35,0,9,166,0,8,3,0,8,131,0,8,67,0,9,230,80,7,7,0,8,91,0,8,27,0,9,150,84,7,67,0,8,123,0,8,59,0,9,214,82,7,19,0,8,107,0,8,43,0,9,182,0,8,11,0,8,139,0,8,75,0,9,246,80,7,5,0,8,87,0,8,23,192,8,0,83,7,51,0,8,119,0,8,55,0,9,206,81,7,15,0,8,103,0,8,39,0,9,174,0,8,7,0,8,135,0,8,71,0,9,238,80,7,9,0,8,95,0,8,31,0,9,158,84,7,99,0,8,127,0,8,63,0,9,222,82,7,27,0,8,111,0,8,47,0,9,190,0,8,15,0,8,143,0,8,79,0,9,254,96,7,256,0,8,80,0,8,16,84,8,115,82,7,31,0,8,112,0,8,48,0,9,193,80,7,10,0,8,96,0,8,32,0,9,161,0,8,0,0,8,128,0,8,64,0,9,225,80,7,6,0,8,88,0,8,24,0,9,145,83,7,59,0,8,120,0,8,56,0,9,209,81,7,17,0,8,104,0,8,40,0,9,177,0,8,8,0,8,136,0,8,72,0,9,241,80,7,4,0,8,84,0,8,20,85,8,227,83,7,43,0,8,116,0,8,52,0,9,201,81,7,13,0,8,100,0,8,36,0,9,169,0,8,4,0,8,132,0,8,68,0,9,233,80,7,8,0,8,92,0,8,28,0,9,153,84,7,83,0,8,124,0,8,60,0,9,217,82,7,23,0,8,108,0,8,44,0,9,185,0,8,12,0,8,140,0,8,76,0,9,249,80,7,3,0,8,82,0,8,18,85,8,163,83,7,35,0,8,114,0,8,50,0,9,197,81,7,11,0,8,98,0,8,34,0,9,165,0,8,2,0,8,130,0,8,66,0,9,229,80,7,7,0,8,90,0,8,26,0,9,149,84,7,67,0,8,122,0,8,58,0,9,213,82,7,19,0,8,106,0,8,42,0,9,181,0,8,10,0,8,138,0,8,74,0,9,245,80,7,5,0,8,86,0,8,22,192,8,0,83,7,51,0,8,118,0,8,54,0,9,205,81,7,15,0,8,102,0,8,38,0,9,173,0,8,6,0,8,134,0,8,70,0,9,237,80,7,9,0,8,94,0,8,30,0,9,157,84,7,99,0,8,126,0,8,62,0,9,221,82,7,27,0,8,110,0,8,46,0,9,189,0,8,14,0,8,142,0,8,78,0,9,253,96,7,256,0,8,81,0,8,17,85,8,131,82,7,31,0,8,113,0,8,49,0,9,195,80,7,10,0,8,97,0,8,33,0,9,163,0,8,1,0,8,129,0,8,65,0,9,227,80,7,6,0,8,89,0,8,25,0,9,147,83,7,59,0,8,121,0,8,57,0,9,211,81,7,17,0,8,105,0,8,41,0,9,179,0,8,9,0,8,137,0,8,73,0,9,243,80,7,4,0,8,85,0,8,21,80,8,258,83,7,43,0,8,117,0,8,53,0,9,203,81,7,13,0,8,101,0,8,37,0,9,171,0,8,5,0,8,133,0,8,69,0,9,235,80,7,8,0,8,93,0,8,29,0,9,155,84,7,83,0,8,125,0,8,61,0,9,219,82,7,23,0,8,109,0,8,45,0,9,187,0,8,13,0,8,141,0,8,77,0,9,251,80,7,3,0,8,83,0,8,19,85,8,195,83,7,35,0,8,115,0,8,51,0,9,199,81,7,11,0,8,99,0,8,35,0,9,167,0,8,3,0,8,131,0,8,67,0,9,231,80,7,7,0,8,91,0,8,27,0,9,151,84,7,67,0,8,123,0,8,59,0,9,215,82,7,19,0,8,107,0,8,43,0,9,183,0,8,11,0,8,139,0,8,75,0,9,247,80,7,5,0,8,87,0,8,23,192,8,0,83,7,51,0,8,119,0,8,55,0,9,207,81,7,15,0,8,103,0,8,39,0,9,175,0,8,7,0,8,135,0,8,71,0,9,239,80,7,9,0,8,95,0,8,31,0,9,159,84,7,99,0,8,127,0,8,63,0,9,223,82,7,27,0,8,111,0,8,47,0,9,191,0,8,15,0,8,143,0,8,79,0,9,255],ft=[80,5,1,87,5,257,83,5,17,91,5,4097,81,5,5,89,5,1025,85,5,65,93,5,16385,80,5,3,88,5,513,84,5,33,92,5,8193,82,5,9,90,5,2049,86,5,129,192,5,24577,80,5,2,87,5,385,83,5,25,91,5,6145,81,5,7,89,5,1537,85,5,97,93,5,24577,80,5,4,88,5,769,84,5,49,92,5,12289,82,5,13,90,5,3073,86,5,193,192,5,24577],at=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258,0,0],lt=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,112,112],ut=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],wt=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];function ht(){let e,t,n,r,s,i;function o(e,t,o,c,f,a,l,u,w,h,d){let p,y,m,b,g,k,v,S,z,C,x,A,_,I,P;C=0,g=o;do{n[e[t+C]]++,C++,g--}while(0!==g);if(n[0]==o)return l[0]=-1,u[0]=0,0;for(S=u[0],k=1;15>=k&&0===n[k];k++);for(v=k,k>S&&(S=k),g=15;0!==g&&0===n[g];g--);for(m=g,S>g&&(S=g),u[0]=S,I=1<<k;g>k;k++,I<<=1)if(0>(I-=n[k]))return st;if(0>(I-=n[g]))return st;for(n[g]+=I,i[1]=k=0,C=1,_=2;0!=--g;)i[_]=k+=n[C],_++,C++;g=0,C=0;do{0!==(k=e[t+C])&&(d[i[k]++]=g),C++}while(++g<o);for(o=i[m],i[0]=g=0,C=0,b=-1,A=-S,s[0]=0,x=0,P=0;m>=v;v++)for(p=n[v];0!=p--;){for(;v>A+S;){if(b++,A+=S,P=m-A,P=P>S?S:P,(y=1<<(k=v-A))>p+1&&(y-=p+1,_=v,P>k))for(;++k<P&&(y<<=1)>n[++_];)y-=n[_];if(P=1<<k,h[0]+P>1440)return st;s[b]=x=h[0],h[0]+=P,0!==b?(i[b]=g,r[0]=k,r[1]=S,k=g>>>A-S,r[2]=x-s[b-1]-k,w.set(r,3*(s[b-1]+k))):l[0]=x}for(r[1]=v-A,o>C?d[C]<c?(r[0]=256>d[C]?0:96,r[2]=d[C++]):(r[0]=a[d[C]-c]+16+64,r[2]=f[d[C++]-c]):r[0]=192,y=1<<v-A,k=g>>>A;P>k;k+=y)w.set(r,3*(x+k));for(k=1<<v-1;g&k;k>>>=1)g^=k;for(g^=k,z=(1<<A)-1;(g&z)!=i[b];)b--,A-=S,z=(1<<A)-1}return 0!==I&&1!=m?it:0}function c(o){let c;for(e||(e=[],t=[],n=new f(16),r=[],s=new f(15),i=new f(16)),t.length<o&&(t=[]),c=0;o>c;c++)t[c]=0;for(c=0;16>c;c++)n[c]=0;for(c=0;3>c;c++)r[c]=0;s.set(n.subarray(0,15),0),i.set(n.subarray(0,16),0)}this.it=(n,r,s,i,f)=>{let a;return c(19),e[0]=0,a=o(n,0,19,19,null,null,s,r,i,e,t),a==st?f.Fe="oversubscribed dynamic bit lengths tree":a!=it&&0!==r[0]||(f.Fe="incomplete dynamic bit lengths tree",a=st),a},this.ot=(n,r,s,i,f,a,l,u,w)=>{let h;return c(288),e[0]=0,h=o(s,0,n,257,at,lt,a,i,u,e,t),0!=h||0===i[0]?(h==st?w.Fe="oversubscribed literal/length tree":-4!=h&&(w.Fe="incomplete literal/length tree",h=st),h):(c(288),h=o(s,n,r,0,ut,wt,l,f,u,e,t),0!=h||0===f[0]&&n>257?(h==st?w.Fe="oversubscribed distance tree":h==it?(w.Fe="incomplete distance tree",h=st):-4!=h&&(w.Fe="empty distance tree with lengths",h=st),h):0)}}function dt(){const e=this;let t,n,r,s,i=0,o=0,c=0,f=0,a=0,l=0,u=0,w=0,h=0,d=0;function p(e,t,n,r,s,i,o,c){let f,a,l,u,w,h,d,p,y,m,b,g,k,v,S,z;d=c.rt,p=c.je,w=o.ct,h=o.ft,y=o.write,m=y<o.read?o.read-y-1:o.end-y,b=ot[e],g=ot[t];do{for(;20>h;)p--,w|=(255&c.lt(d++))<<h,h+=8;if(f=w&b,a=n,l=r,z=3*(l+f),0!==(u=a[z]))for(;;){if(w>>=a[z+1],h-=a[z+1],16&u){for(u&=15,k=a[z+2]+(w&ot[u]),w>>=u,h-=u;15>h;)p--,w|=(255&c.lt(d++))<<h,h+=8;for(f=w&g,a=s,l=i,z=3*(l+f),u=a[z];;){if(w>>=a[z+1],h-=a[z+1],16&u){for(u&=15;u>h;)p--,w|=(255&c.lt(d++))<<h,h+=8;if(v=a[z+2]+(w&ot[u]),w>>=u,h-=u,m-=k,v>y){S=y-v;do{S+=o.end}while(0>S);if(u=o.end-S,k>u){if(k-=u,y-S>0&&u>y-S)do{o.ut[y++]=o.ut[S++]}while(0!=--u);else o.ut.set(o.ut.subarray(S,S+u),y),y+=u,S+=u,u=0;S=0}}else S=y-v,y-S>0&&2>y-S?(o.ut[y++]=o.ut[S++],o.ut[y++]=o.ut[S++],k-=2):(o.ut.set(o.ut.subarray(S,S+2),y),y+=2,S+=2,k-=2);if(y-S>0&&k>y-S)do{o.ut[y++]=o.ut[S++]}while(0!=--k);else o.ut.set(o.ut.subarray(S,S+k),y),y+=k,S+=k,k=0;break}if(64&u)return c.Fe="invalid distance code",k=c.je-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ct=w,o.ft=h,c.je=p,c.Ge+=d-c.rt,c.rt=d,o.write=y,st;f+=a[z+2],f+=w&ot[u],z=3*(l+f),u=a[z]}break}if(64&u)return 32&u?(k=c.je-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ct=w,o.ft=h,c.je=p,c.Ge+=d-c.rt,c.rt=d,o.write=y,1):(c.Fe="invalid literal/length code",k=c.je-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ct=w,o.ft=h,c.je=p,c.Ge+=d-c.rt,c.rt=d,o.write=y,st);if(f+=a[z+2],f+=w&ot[u],z=3*(l+f),0===(u=a[z])){w>>=a[z+1],h-=a[z+1],o.ut[y++]=a[z+2],m--;break}}else w>>=a[z+1],h-=a[z+1],o.ut[y++]=a[z+2],m--}while(m>=258&&p>=10);return k=c.je-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ct=w,o.ft=h,c.je=p,c.Ge+=d-c.rt,c.rt=d,o.write=y,0}e.init=(e,i,o,c,f,a)=>{t=0,u=e,w=i,r=o,h=c,s=f,d=a,n=null},e.wt=(e,y,m)=>{let b,g,k,v,S,z,C,x=0,A=0,_=0;for(_=y.rt,v=y.je,x=e.ct,A=e.ft,S=e.write,z=S<e.read?e.read-S-1:e.end-S;;)switch(t){case 0:if(z>=258&&v>=10&&(e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,m=p(u,w,r,h,s,d,e,y),_=y.rt,v=y.je,x=e.ct,A=e.ft,S=e.write,z=S<e.read?e.read-S-1:e.end-S,0!=m)){t=1==m?7:9;break}c=u,n=r,o=h,t=1;case 1:for(b=c;b>A;){if(0===v)return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);m=0,v--,x|=(255&y.lt(_++))<<A,A+=8}if(g=3*(o+(x&ot[b])),x>>>=n[g+1],A-=n[g+1],k=n[g],0===k){f=n[g+2],t=6;break}if(16&k){a=15&k,i=n[g+2],t=2;break}if(!(64&k)){c=k,o=g/3+n[g+2];break}if(32&k){t=7;break}return t=9,y.Fe="invalid literal/length code",m=st,e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);case 2:for(b=a;b>A;){if(0===v)return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);m=0,v--,x|=(255&y.lt(_++))<<A,A+=8}i+=x&ot[b],x>>=b,A-=b,c=w,n=s,o=d,t=3;case 3:for(b=c;b>A;){if(0===v)return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);m=0,v--,x|=(255&y.lt(_++))<<A,A+=8}if(g=3*(o+(x&ot[b])),x>>=n[g+1],A-=n[g+1],k=n[g],16&k){a=15&k,l=n[g+2],t=4;break}if(!(64&k)){c=k,o=g/3+n[g+2];break}return t=9,y.Fe="invalid distance code",m=st,e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);case 4:for(b=a;b>A;){if(0===v)return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);m=0,v--,x|=(255&y.lt(_++))<<A,A+=8}l+=x&ot[b],x>>=b,A-=b,t=5;case 5:for(C=S-l;0>C;)C+=e.end;for(;0!==i;){if(0===z&&(S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z&&(e.write=S,m=e.ht(y,m),S=e.write,z=S<e.read?e.read-S-1:e.end-S,S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z)))return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);e.ut[S++]=e.ut[C++],z--,C==e.end&&(C=0),i--}t=0;break;case 6:if(0===z&&(S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z&&(e.write=S,m=e.ht(y,m),S=e.write,z=S<e.read?e.read-S-1:e.end-S,S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z)))return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);m=0,e.ut[S++]=f,z--,t=0;break;case 7:if(A>7&&(A-=8,v++,_--),e.write=S,m=e.ht(y,m),S=e.write,z=S<e.read?e.read-S-1:e.end-S,e.read!=e.write)return e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);t=8;case 8:return m=1,e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);case 9:return m=st,e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m);default:return m=rt,e.ct=x,e.ft=A,y.je=v,y.Ge+=_-y.rt,y.rt=_,e.write=S,e.ht(y,m)}},e.dt=()=>{}}ht.yt=(e,t,n,r)=>(e[0]=9,t[0]=5,n[0]=ct,r[0]=ft,0);const pt=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];function yt(e,t){const n=this;let r,s=0,o=0,c=0,a=0;const l=[0],u=[0],w=new dt;let h=0,d=new f(4320);const p=new ht;n.ft=0,n.ct=0,n.ut=new i(t),n.end=t,n.read=0,n.write=0,n.reset=(e,t)=>{t&&(t[0]=0),6==s&&w.dt(e),s=0,n.ft=0,n.ct=0,n.read=n.write=0},n.reset(e,null),n.ht=(e,t)=>{let r,s,i;return s=e.st,i=n.read,r=(i>n.write?n.end:n.write)-i,r>e.nt&&(r=e.nt),0!==r&&t==it&&(t=0),e.nt-=r,e.Je+=r,e.et.set(n.ut.subarray(i,i+r),s),s+=r,i+=r,i==n.end&&(i=0,n.write==n.end&&(n.write=0),r=n.write-i,r>e.nt&&(r=e.nt),0!==r&&t==it&&(t=0),e.nt-=r,e.Je+=r,e.et.set(n.ut.subarray(i,i+r),s),s+=r,i+=r),e.st=s,n.read=i,t},n.wt=(e,t)=>{let i,f,y,m,b,g,k,v;for(m=e.rt,b=e.je,f=n.ct,y=n.ft,g=n.write,k=g<n.read?n.read-g-1:n.end-g;;){let S,z,C,x,A,_,I,P;switch(s){case 0:for(;3>y;){if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);t=0,b--,f|=(255&e.lt(m++))<<y,y+=8}switch(i=7&f,h=1&i,i>>>1){case 0:f>>>=3,y-=3,i=7&y,f>>>=i,y-=i,s=1;break;case 1:S=[],z=[],C=[[]],x=[[]],ht.yt(S,z,C,x),w.init(S[0],z[0],C[0],0,x[0],0),f>>>=3,y-=3,s=6;break;case 2:f>>>=3,y-=3,s=3;break;case 3:return f>>>=3,y-=3,s=9,e.Fe="invalid block type",t=st,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t)}break;case 1:for(;32>y;){if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);t=0,b--,f|=(255&e.lt(m++))<<y,y+=8}if((~f>>>16&65535)!=(65535&f))return s=9,e.Fe="invalid stored block lengths",t=st,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);o=65535&f,f=y=0,s=0!==o?2:0!==h?7:0;break;case 2:if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);if(0===k&&(g==n.end&&0!==n.read&&(g=0,k=g<n.read?n.read-g-1:n.end-g),0===k&&(n.write=g,t=n.ht(e,t),g=n.write,k=g<n.read?n.read-g-1:n.end-g,g==n.end&&0!==n.read&&(g=0,k=g<n.read?n.read-g-1:n.end-g),0===k)))return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);if(t=0,i=o,i>b&&(i=b),i>k&&(i=k),n.ut.set(e.He(m,i),g),m+=i,b-=i,g+=i,k-=i,0!=(o-=i))break;s=0!==h?7:0;break;case 3:for(;14>y;){if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);t=0,b--,f|=(255&e.lt(m++))<<y,y+=8}if(c=i=16383&f,(31&i)>29||(i>>5&31)>29)return s=9,e.Fe="too many length or distance symbols",t=st,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);if(i=258+(31&i)+(i>>5&31),!r||r.length<i)r=[];else for(v=0;i>v;v++)r[v]=0;f>>>=14,y-=14,a=0,s=4;case 4:for(;4+(c>>>10)>a;){for(;3>y;){if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);t=0,b--,f|=(255&e.lt(m++))<<y,y+=8}r[pt[a++]]=7&f,f>>>=3,y-=3}for(;19>a;)r[pt[a++]]=0;if(l[0]=7,i=p.it(r,l,u,d,e),0!=i)return(t=i)==st&&(r=null,s=9),n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);a=0,s=5;case 5:for(;i=c,258+(31&i)+(i>>5&31)>a;){let o,w;for(i=l[0];i>y;){if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);t=0,b--,f|=(255&e.lt(m++))<<y,y+=8}if(i=d[3*(u[0]+(f&ot[i]))+1],w=d[3*(u[0]+(f&ot[i]))+2],16>w)f>>>=i,y-=i,r[a++]=w;else{for(v=18==w?7:w-14,o=18==w?11:3;i+v>y;){if(0===b)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);t=0,b--,f|=(255&e.lt(m++))<<y,y+=8}if(f>>>=i,y-=i,o+=f&ot[v],f>>>=v,y-=v,v=a,i=c,v+o>258+(31&i)+(i>>5&31)||16==w&&1>v)return r=null,s=9,e.Fe="invalid bit length repeat",t=st,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);w=16==w?r[v-1]:0;do{r[v++]=w}while(0!=--o);a=v}}if(u[0]=-1,A=[],_=[],I=[],P=[],A[0]=9,_[0]=6,i=c,i=p.ot(257+(31&i),1+(i>>5&31),r,A,_,I,P,d,e),0!=i)return i==st&&(r=null,s=9),t=i,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);w.init(A[0],_[0],d,I[0],d,P[0]),s=6;case 6:if(n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,1!=(t=w.wt(n,e,t)))return n.ht(e,t);if(t=0,w.dt(e),m=e.rt,b=e.je,f=n.ct,y=n.ft,g=n.write,k=g<n.read?n.read-g-1:n.end-g,0===h){s=0;break}s=7;case 7:if(n.write=g,t=n.ht(e,t),g=n.write,k=g<n.read?n.read-g-1:n.end-g,n.read!=n.write)return n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);s=8;case 8:return t=1,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);case 9:return t=st,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t);default:return t=rt,n.ct=f,n.ft=y,e.je=b,e.Ge+=m-e.rt,e.rt=m,n.write=g,n.ht(e,t)}}},n.dt=e=>{n.reset(e,null),n.ut=null,d=null},n.bt=(e,t,r)=>{n.ut.set(e.subarray(t,t+r),0),n.read=n.write=r},n.gt=()=>1==s?1:0}const mt=13,bt=[0,0,255,255];function gt(){const e=this;function t(e){return e&&e.kt?(e.Ge=e.Je=0,e.Fe=null,e.kt.mode=7,e.kt.vt.reset(e,null),0):rt}e.mode=0,e.method=0,e.St=[0],e.zt=0,e.marker=0,e.Ct=0,e.xt=t=>(e.vt&&e.vt.dt(t),e.vt=null,0),e.At=(n,r)=>(n.Fe=null,e.vt=null,8>r||r>15?(e.xt(n),rt):(e.Ct=r,n.kt.vt=new yt(n,1<<r),t(n),0)),e._t=(e,t)=>{let n,r;if(!e||!e.kt||!e.tt)return rt;const s=e.kt;for(t=4==t?it:0,n=it;;)switch(s.mode){case 0:if(0===e.je)return n;if(n=t,e.je--,e.Ge++,8!=(15&(s.method=e.lt(e.rt++)))){s.mode=mt,e.Fe="unknown compression method",s.marker=5;break}if(8+(s.method>>4)>s.Ct){s.mode=mt,e.Fe="invalid win size",s.marker=5;break}s.mode=1;case 1:if(0===e.je)return n;if(n=t,e.je--,e.Ge++,r=255&e.lt(e.rt++),((s.method<<8)+r)%31!=0){s.mode=mt,e.Fe="incorrect header check",s.marker=5;break}if(!(32&r)){s.mode=7;break}s.mode=2;case 2:if(0===e.je)return n;n=t,e.je--,e.Ge++,s.zt=(255&e.lt(e.rt++))<<24&4278190080,s.mode=3;case 3:if(0===e.je)return n;n=t,e.je--,e.Ge++,s.zt+=(255&e.lt(e.rt++))<<16&16711680,s.mode=4;case 4:if(0===e.je)return n;n=t,e.je--,e.Ge++,s.zt+=(255&e.lt(e.rt++))<<8&65280,s.mode=5;case 5:return 0===e.je?n:(n=t,e.je--,e.Ge++,s.zt+=255&e.lt(e.rt++),s.mode=6,2);case 6:return s.mode=mt,e.Fe="need dictionary",s.marker=0,rt;case 7:if(n=s.vt.wt(e,n),n==st){s.mode=mt,s.marker=0;break}if(0==n&&(n=t),1!=n)return n;n=t,s.vt.reset(e,s.St),s.mode=12;case 12:return e.je=0,1;case mt:return st;default:return rt}},e.It=(e,t,n)=>{let r=0,s=n;if(!e||!e.kt||6!=e.kt.mode)return rt;const i=e.kt;return s<1<<i.Ct||(s=(1<<i.Ct)-1,r=n-s),i.vt.bt(t,r,s),i.mode=7,0},e.Pt=e=>{let n,r,s,i,o;if(!e||!e.kt)return rt;const c=e.kt;if(c.mode!=mt&&(c.mode=mt,c.marker=0),0===(n=e.je))return it;for(r=e.rt,s=c.marker;0!==n&&4>s;)e.lt(r)==bt[s]?s++:s=0!==e.lt(r)?0:4-s,r++,n--;return e.Ge+=r-e.rt,e.rt=r,e.je=n,c.marker=s,4!=s?st:(i=e.Ge,o=e.Je,t(e),e.Ge=i,e.Je=o,c.mode=7,0)},e.Dt=e=>e&&e.kt&&e.kt.vt?e.kt.vt.gt():rt}function kt(){}function vt(e){const t=new kt,n=e&&e.chunkSize?r.floor(2*e.chunkSize):131072,o=new i(n);let c=!1;t.At(),t.et=o,this.append=(e,r)=>{const f=[];let a,l,u=0,w=0,h=0;if(0!==e.length){t.rt=0,t.tt=e,t.je=e.length;do{if(t.st=0,t.nt=n,0!==t.je||c||(t.rt=0,c=!0),a=t._t(0),c&&a===it){if(0!==t.je)throw new s("inflating: bad input")}else if(0!==a&&1!==a)throw new s("inflating: "+t.Fe);if((c||1===a)&&t.je===e.length)throw new s("inflating: bad input");t.st&&(t.st===n?f.push(new i(o)):f.push(o.subarray(0,t.st))),h+=t.st,r&&t.rt>0&&t.rt!=u&&(r(t.rt),u=t.rt)}while(t.je>0||0===t.nt);return f.length>1?(l=new i(h),f.forEach((e=>{l.set(e,w),w+=e.length}))):l=f[0]?new i(f[0]):new i,l}},this.flush=()=>{t.xt()}}kt.prototype={At(e){const t=this;return t.kt=new gt,e||(e=15),t.kt.At(t,e)},_t(e){const t=this;return t.kt?t.kt._t(t,e):rt},xt(){const e=this;if(!e.kt)return rt;const t=e.kt.xt(e);return e.kt=null,t},Pt(){const e=this;return e.kt?e.kt.Pt(e):rt},It(e,t){const n=this;return n.kt?n.kt.It(n,e,t):rt},lt(e){return this.tt[e]},He(e,t){return this.tt.subarray(e,e+t)}},self.initCodec=()=>{self.Deflate=nt,self.Inflate=vt};\n',r=()=>t.useDataURI?"data:text/javascript,"+encodeURIComponent(n):URL.createObjectURL(new Blob([n],{type:"text/javascript"}));e({workerScripts:{inflate:[r],deflate:[r]}})}
+function e(e,t={}){const n='const{Array:e,Object:t,Number:n,Math:r,Error:s,Uint8Array:i,Uint16Array:o,Uint32Array:c,Int32Array:f,Map:a,DataView:l,Promise:u,TextEncoder:w,crypto:h,postMessage:d,TransformStream:p,ReadableStream:y,WritableStream:m,CompressionStream:b,DecompressionStream:g}=self,k=void 0,v="undefined",S="function";class z{constructor(e){return class extends p{constructor(t,n){const r=new e(n);super({transform(e,t){t.enqueue(r.append(e))},flush(e){const t=r.flush();t&&e.enqueue(t)}})}}}}const C=[];for(let e=0;256>e;e++){let t=e;for(let e=0;8>e;e++)1&t?t=t>>>1^3988292384:t>>>=1;C[e]=t}class x{constructor(e){this.t=e||-1}append(e){let t=0|this.t;for(let n=0,r=0|e.length;r>n;n++)t=t>>>8^C[255&(t^e[n])];this.t=t}get(){return~this.t}}class A extends p{constructor(){let e;const t=new x;super({transform(e,n){t.append(e),n.enqueue(e)},flush(){const n=new i(4);new l(n.buffer).setUint32(0,t.get()),e.value=n}}),e=this}}const _={concat(e,t){if(0===e.length||0===t.length)return e.concat(t);const n=e[e.length-1],r=_.i(n);return 32===r?e.concat(t):_.o(t,r,0|n,e.slice(0,e.length-1))},l(e){const t=e.length;if(0===t)return 0;const n=e[t-1];return 32*(t-1)+_.i(n)},u(e,t){if(32*e.length<t)return e;const n=(e=e.slice(0,r.ceil(t/32))).length;return t&=31,n>0&&t&&(e[n-1]=_.h(t,e[n-1]&2147483648>>t-1,1)),e},h:(e,t,n)=>32===e?t:(n?0|t:t<<32-e)+1099511627776*e,i:e=>r.round(e/1099511627776)||32,o(e,t,n,r){for(void 0===r&&(r=[]);t>=32;t-=32)r.push(n),n=0;if(0===t)return r.concat(e);for(let s=0;s<e.length;s++)r.push(n|e[s]>>>t),n=e[s]<<32-t;const s=e.length?e[e.length-1]:0,i=_.i(s);return r.push(_.h(t+i&31,t+i>32?n:r.pop(),1)),r}},I={bytes:{p(e){const t=_.l(e)/8,n=new i(t);let r;for(let s=0;t>s;s++)3&s||(r=e[s/4]),n[s]=r>>>24,r<<=8;return n},m(e){const t=[];let n,r=0;for(n=0;n<e.length;n++)r=r<<8|e[n],3&~n||(t.push(r),r=0);return 3&n&&t.push(_.h(8*(3&n),r)),t}}},P=class{constructor(e){const t=this;t.blockSize=512,t.k=[1732584193,4023233417,2562383102,271733878,3285377520],t.v=[1518500249,1859775393,2400959708,3395469782],e?(t.S=e.S.slice(0),t.C=e.C.slice(0),t.A=e.A):t.reset()}reset(){const e=this;return e.S=e.k.slice(0),e.C=[],e.A=0,e}update(e){const t=this;"string"==typeof e&&(e=I._.m(e));const n=t.C=_.concat(t.C,e),r=t.A,i=t.A=r+_.l(e);if(i>9007199254740991)throw new s("Cannot hash more than 2^53 - 1 bits");const o=new c(n);let f=0;for(let e=t.blockSize+r-(t.blockSize+r&t.blockSize-1);i>=e;e+=t.blockSize)t.I(o.subarray(16*f,16*(f+1))),f+=1;return n.splice(0,16*f),t}P(){const e=this;let t=e.C;const n=e.S;t=_.concat(t,[_.h(1,1)]);for(let e=t.length+2;15&e;e++)t.push(0);for(t.push(r.floor(e.A/4294967296)),t.push(0|e.A);t.length;)e.I(t.splice(0,16));return e.reset(),n}D(e,t,n,r){return e>19?e>39?e>59?e>79?void 0:t^n^r:t&n|t&r|n&r:t^n^r:t&n|~t&r}V(e,t){return t<<e|t>>>32-e}I(t){const n=this,s=n.S,i=e(80);for(let e=0;16>e;e++)i[e]=t[e];let o=s[0],c=s[1],f=s[2],a=s[3],l=s[4];for(let e=0;79>=e;e++){16>e||(i[e]=n.V(1,i[e-3]^i[e-8]^i[e-14]^i[e-16]));const t=n.V(5,o)+n.D(e,c,f,a)+l+i[e]+n.v[r.floor(e/20)]|0;l=a,a=f,f=n.V(30,c),c=o,o=t}s[0]=s[0]+o|0,s[1]=s[1]+c|0,s[2]=s[2]+f|0,s[3]=s[3]+a|0,s[4]=s[4]+l|0}},D={getRandomValues(e){const t=new c(e.buffer),n=e=>{let t=987654321;const n=4294967295;return()=>(t=36969*(65535&t)+(t>>16)&n,(((t<<16)+(e=18e3*(65535&e)+(e>>16)&n)&n)/4294967296+.5)*(r.random()>.5?1:-1))};for(let s,i=0;i<e.length;i+=4){const e=n(4294967296*(s||r.random()));s=987654071*e(),t[i/4]=4294967296*e()|0}return e}},V={importKey:e=>new V.R(I.bytes.m(e)),B(e,t,n,r){if(n=n||1e4,0>r||0>n)throw new s("invalid params to pbkdf2");const i=1+(r>>5)<<2;let o,c,f,a,u;const w=new ArrayBuffer(i),h=new l(w);let d=0;const p=_;for(t=I.bytes.m(t),u=1;(i||1)>d;u++){for(o=c=e.encrypt(p.concat(t,[u])),f=1;n>f;f++)for(c=e.encrypt(c),a=0;a<c.length;a++)o[a]^=c[a];for(f=0;(i||1)>d&&f<o.length;f++)h.setInt32(d,o[f]),d+=4}return w.slice(0,r/8)},R:class{constructor(e){const t=this,n=t.M=P,r=[[],[]];t.U=[new n,new n];const s=t.U[0].blockSize/32;e.length>s&&(e=(new n).update(e).P());for(let t=0;s>t;t++)r[0][t]=909522486^e[t],r[1][t]=1549556828^e[t];t.U[0].update(r[0]),t.U[1].update(r[1]),t.K=new n(t.U[0])}reset(){const e=this;e.K=new e.M(e.U[0]),e.N=!1}update(e){this.N=!0,this.K.update(e)}digest(){const e=this,t=e.K.P(),n=new e.M(e.U[1]).update(t).P();return e.reset(),n}encrypt(e){if(this.N)throw new s("encrypt on already updated hmac called!");return this.update(e),this.digest(e)}}},R=typeof h!=v&&typeof h.getRandomValues==S,B="Invalid password",E="Invalid signature",M="zipjs-abort-check-password";function U(e){return R?h.getRandomValues(e):D.getRandomValues(e)}const K=16,N={name:"PBKDF2"},O=t.assign({hash:{name:"HMAC"}},N),T=t.assign({iterations:1e3,hash:{name:"SHA-1"}},N),W=["deriveBits"],j=[8,12,16],H=[16,24,32],L=10,F=[0,0,0,0],q=typeof h!=v,G=q&&h.subtle,J=q&&typeof G!=v,Q=I.bytes,X=class{constructor(e){const t=this;t.O=[[[],[],[],[],[]],[[],[],[],[],[]]],t.O[0][0][0]||t.T();const n=t.O[0][4],r=t.O[1],i=e.length;let o,c,f,a=1;if(4!==i&&6!==i&&8!==i)throw new s("invalid aes key size");for(t.v=[c=e.slice(0),f=[]],o=i;4*i+28>o;o++){let e=c[o-1];(o%i==0||8===i&&o%i==4)&&(e=n[e>>>24]<<24^n[e>>16&255]<<16^n[e>>8&255]<<8^n[255&e],o%i==0&&(e=e<<8^e>>>24^a<<24,a=a<<1^283*(a>>7))),c[o]=c[o-i]^e}for(let e=0;o;e++,o--){const t=c[3&e?o:o-4];f[e]=4>=o||4>e?t:r[0][n[t>>>24]]^r[1][n[t>>16&255]]^r[2][n[t>>8&255]]^r[3][n[255&t]]}}encrypt(e){return this.W(e,0)}decrypt(e){return this.W(e,1)}T(){const e=this.O[0],t=this.O[1],n=e[4],r=t[4],s=[],i=[];let o,c,f,a;for(let e=0;256>e;e++)i[(s[e]=e<<1^283*(e>>7))^e]=e;for(let l=o=0;!n[l];l^=c||1,o=i[o]||1){let i=o^o<<1^o<<2^o<<3^o<<4;i=i>>8^255&i^99,n[l]=i,r[i]=l,a=s[f=s[c=s[l]]];let u=16843009*a^65537*f^257*c^16843008*l,w=257*s[i]^16843008*i;for(let n=0;4>n;n++)e[n][l]=w=w<<24^w>>>8,t[n][i]=u=u<<24^u>>>8}for(let n=0;5>n;n++)e[n]=e[n].slice(0),t[n]=t[n].slice(0)}W(e,t){if(4!==e.length)throw new s("invalid aes block size");const n=this.v[t],r=n.length/4-2,i=[0,0,0,0],o=this.O[t],c=o[0],f=o[1],a=o[2],l=o[3],u=o[4];let w,h,d,p=e[0]^n[0],y=e[t?3:1]^n[1],m=e[2]^n[2],b=e[t?1:3]^n[3],g=4;for(let e=0;r>e;e++)w=c[p>>>24]^f[y>>16&255]^a[m>>8&255]^l[255&b]^n[g],h=c[y>>>24]^f[m>>16&255]^a[b>>8&255]^l[255&p]^n[g+1],d=c[m>>>24]^f[b>>16&255]^a[p>>8&255]^l[255&y]^n[g+2],b=c[b>>>24]^f[p>>16&255]^a[y>>8&255]^l[255&m]^n[g+3],g+=4,p=w,y=h,m=d;for(let e=0;4>e;e++)i[t?3&-e:e]=u[p>>>24]<<24^u[y>>16&255]<<16^u[m>>8&255]<<8^u[255&b]^n[g++],w=p,p=y,y=m,m=b,b=w;return i}},Y=class{constructor(e,t){this.j=e,this.H=t,this.L=t}reset(){this.L=this.H}update(e){return this.F(this.j,e,this.L)}q(e){if(255&~(e>>24))e+=1<<24;else{let t=e>>16&255,n=e>>8&255,r=255&e;255===t?(t=0,255===n?(n=0,255===r?r=0:++r):++n):++t,e=0,e+=t<<16,e+=n<<8,e+=r}return e}G(e){0===(e[0]=this.q(e[0]))&&(e[1]=this.q(e[1]))}F(e,t,n){let r;if(!(r=t.length))return[];const s=_.l(t);for(let s=0;r>s;s+=4){this.G(n);const r=e.encrypt(n);t[s]^=r[0],t[s+1]^=r[1],t[s+2]^=r[2],t[s+3]^=r[3]}return _.u(t,s)}},Z=V.R;let $=q&&J&&typeof G.importKey==S,ee=q&&J&&typeof G.deriveBits==S;class te extends p{constructor({password:e,rawPassword:n,signed:r,encryptionStrength:o,checkPasswordOnly:c}){super({start(){t.assign(this,{ready:new u((e=>this.J=e)),password:ie(e,n),signed:r,X:o-1,pending:new i})},async transform(e,t){const n=this,{password:r,X:o,J:f,ready:a}=n;r?(await(async(e,t,n,r)=>{const i=await se(e,t,n,ce(r,0,j[t])),o=ce(r,j[t]);if(i[0]!=o[0]||i[1]!=o[1])throw new s(B)})(n,o,r,ce(e,0,j[o]+2)),e=ce(e,j[o]+2),c?t.error(new s(M)):f()):await a;const l=new i(e.length-L-(e.length-L)%K);t.enqueue(re(n,e,l,0,L,!0))},async flush(e){const{signed:t,Y:n,Z:r,pending:o,ready:c}=this;if(r&&n){await c;const f=ce(o,0,o.length-L),a=ce(o,o.length-L);let l=new i;if(f.length){const e=ae(Q,f);r.update(e);const t=n.update(e);l=fe(Q,t)}if(t){const e=ce(fe(Q,r.digest()),0,L);for(let t=0;L>t;t++)if(e[t]!=a[t])throw new s(E)}e.enqueue(l)}}})}}class ne extends p{constructor({password:e,rawPassword:n,encryptionStrength:r}){let s;super({start(){t.assign(this,{ready:new u((e=>this.J=e)),password:ie(e,n),X:r-1,pending:new i})},async transform(e,t){const n=this,{password:r,X:s,J:o,ready:c}=n;let f=new i;r?(f=await(async(e,t,n)=>{const r=U(new i(j[t]));return oe(r,await se(e,t,n,r))})(n,s,r),o()):await c;const a=new i(f.length+e.length-e.length%K);a.set(f,0),t.enqueue(re(n,e,a,f.length,0))},async flush(e){const{Y:t,Z:n,pending:r,ready:o}=this;if(n&&t){await o;let c=new i;if(r.length){const e=t.update(ae(Q,r));n.update(e),c=fe(Q,e)}s.signature=fe(Q,n.digest()).slice(0,L),e.enqueue(oe(c,s.signature))}}}),s=this}}function re(e,t,n,r,s,o){const{Y:c,Z:f,pending:a}=e,l=t.length-s;let u;for(a.length&&(t=oe(a,t),n=((e,t)=>{if(t&&t>e.length){const n=e;(e=new i(t)).set(n,0)}return e})(n,l-l%K)),u=0;l-K>=u;u+=K){const e=ae(Q,ce(t,u,u+K));o&&f.update(e);const s=c.update(e);o||f.update(s),n.set(fe(Q,s),u+r)}return e.pending=ce(t,u),n}async function se(n,r,s,o){n.password=null;const c=await(async(e,t,n,r,s)=>{if(!$)return V.importKey(t);try{return await G.importKey("raw",t,n,!1,s)}catch(e){return $=!1,V.importKey(t)}})(0,s,O,0,W),f=await(async(e,t,n)=>{if(!ee)return V.B(t,e.salt,T.iterations,n);try{return await G.deriveBits(e,t,n)}catch(r){return ee=!1,V.B(t,e.salt,T.iterations,n)}})(t.assign({salt:o},T),c,8*(2*H[r]+2)),a=new i(f),l=ae(Q,ce(a,0,H[r])),u=ae(Q,ce(a,H[r],2*H[r])),w=ce(a,2*H[r]);return t.assign(n,{keys:{key:l,$:u,passwordVerification:w},Y:new Y(new X(l),e.from(F)),Z:new Z(u)}),w}function ie(e,t){return t===k?(e=>{if(typeof w==v){const t=new i((e=unescape(encodeURIComponent(e))).length);for(let n=0;n<t.length;n++)t[n]=e.charCodeAt(n);return t}return(new w).encode(e)})(e):t}function oe(e,t){let n=e;return e.length+t.length&&(n=new i(e.length+t.length),n.set(e,0),n.set(t,e.length)),n}function ce(e,t,n){return e.subarray(t,n)}function fe(e,t){return e.p(t)}function ae(e,t){return e.m(t)}class le extends p{constructor({password:e,passwordVerification:n,checkPasswordOnly:r}){super({start(){t.assign(this,{password:e,passwordVerification:n}),de(this,e)},transform(e,t){const n=this;if(n.password){const t=we(n,e.subarray(0,12));if(n.password=null,t[11]!=n.passwordVerification)throw new s(B);e=e.subarray(12)}r?t.error(new s(M)):t.enqueue(we(n,e))}})}}class ue extends p{constructor({password:e,passwordVerification:n}){super({start(){t.assign(this,{password:e,passwordVerification:n}),de(this,e)},transform(e,t){const n=this;let r,s;if(n.password){n.password=null;const t=U(new i(12));t[11]=n.passwordVerification,r=new i(e.length+t.length),r.set(he(n,t),0),s=12}else r=new i(e.length),s=0;r.set(he(n,e),s),t.enqueue(r)}})}}function we(e,t){const n=new i(t.length);for(let r=0;r<t.length;r++)n[r]=ye(e)^t[r],pe(e,n[r]);return n}function he(e,t){const n=new i(t.length);for(let r=0;r<t.length;r++)n[r]=ye(e)^t[r],pe(e,t[r]);return n}function de(e,n){const r=[305419896,591751049,878082192];t.assign(e,{keys:r,ee:new x(r[0]),te:new x(r[2])});for(let t=0;t<n.length;t++)pe(e,n.charCodeAt(t))}function pe(e,t){let[n,s,i]=e.keys;e.ee.append([t]),n=~e.ee.get(),s=be(r.imul(be(s+me(n)),134775813)+1),e.te.append([s>>>24]),i=~e.te.get(),e.keys=[n,s,i]}function ye(e){const t=2|e.keys[2];return me(r.imul(t,1^t)>>>8)}function me(e){return 255&e}function be(e){return 4294967295&e}const ge="deflate-raw";class ke extends p{constructor(e,{chunkSize:t,CompressionStream:n,CompressionStreamNative:r}){super({});const{compressed:s,encrypted:i,useCompressionStream:o,zipCrypto:c,signed:f,level:a}=e,u=this;let w,h,d=Se(super.readable);i&&!c||!f||(w=new A,d=xe(d,w)),s&&(d=Ce(d,o,{level:a,chunkSize:t},r,n)),i&&(c?d=xe(d,new ue(e)):(h=new ne(e),d=xe(d,h))),ze(u,d,(()=>{let e;i&&!c&&(e=h.signature),i&&!c||!f||(e=new l(w.value.buffer).getUint32(0)),u.signature=e}))}}class ve extends p{constructor(e,{chunkSize:t,DecompressionStream:n,DecompressionStreamNative:r}){super({});const{zipCrypto:i,encrypted:o,signed:c,signature:f,compressed:a,useCompressionStream:u}=e;let w,h,d=Se(super.readable);o&&(i?d=xe(d,new le(e)):(h=new te(e),d=xe(d,h))),a&&(d=Ce(d,u,{chunkSize:t},r,n)),o&&!i||!c||(w=new A,d=xe(d,w)),ze(this,d,(()=>{if((!o||i)&&c){const e=new l(w.value.buffer);if(f!=e.getUint32(0,!1))throw new s(E)}}))}}function Se(e){return xe(e,new p({transform(e,t){e&&e.length&&t.enqueue(e)}}))}function ze(e,n,r){n=xe(n,new p({flush:r})),t.defineProperty(e,"readable",{get:()=>n})}function Ce(e,t,n,r,s){try{e=xe(e,new(t&&r?r:s)(ge,n))}catch(r){if(!t)return e;try{e=xe(e,new s(ge,n))}catch(t){return e}}return e}function xe(e,t){return e.pipeThrough(t)}const Ae="data",_e="close";class Ie extends p{constructor(e,n){super({});const r=this,{codecType:s}=e;let i;s.startsWith("deflate")?i=ke:s.startsWith("inflate")&&(i=ve);let o=0,c=0;const f=new i(e,n),a=super.readable,l=new p({transform(e,t){e&&e.length&&(c+=e.length,t.enqueue(e))},flush(){t.assign(r,{inputSize:c})}}),u=new p({transform(e,t){e&&e.length&&(o+=e.length,t.enqueue(e))},flush(){const{signature:e}=f;t.assign(r,{signature:e,outputSize:o,inputSize:c})}});t.defineProperty(r,"readable",{get:()=>a.pipeThrough(l).pipeThrough(f).pipeThrough(u)})}}class Pe extends p{constructor(e){let t;super({transform:function n(r,s){if(t){const e=new i(t.length+r.length);e.set(t),e.set(r,t.length),r=e,t=null}r.length>e?(s.enqueue(r.slice(0,e)),n(r.slice(e),s)):t=r},flush(e){t&&t.length&&e.enqueue(t)}})}}const De=new a,Ve=new a;let Re,Be=0,Ee=!0;async function Me(e){try{const{options:t,scripts:r,config:s}=e;if(r&&r.length)try{Ee?importScripts.apply(k,r):await Ue(r)}catch(e){Ee=!1,await Ue(r)}self.initCodec&&self.initCodec(),s.CompressionStreamNative=self.CompressionStream,s.DecompressionStreamNative=self.DecompressionStream,self.Deflate&&(s.CompressionStream=new z(self.Deflate)),self.Inflate&&(s.DecompressionStream=new z(self.Inflate));const i={highWaterMark:1},o=e.readable||new y({async pull(e){const t=new u((e=>De.set(Be,e)));Ke({type:"pull",messageId:Be}),Be=(Be+1)%n.MAX_SAFE_INTEGER;const{value:r,done:s}=await t;e.enqueue(r),s&&e.close()}},i),c=e.writable||new m({async write(e){let t;const r=new u((e=>t=e));Ve.set(Be,t),Ke({type:Ae,value:e,messageId:Be}),Be=(Be+1)%n.MAX_SAFE_INTEGER,await r}},i),f=new Ie(t,s);Re=new AbortController;const{signal:a}=Re;await o.pipeThrough(f).pipeThrough(new Pe(s.chunkSize)).pipeTo(c,{signal:a,preventClose:!0,preventAbort:!0}),await c.getWriter().close();const{signature:l,inputSize:w,outputSize:h}=f;Ke({type:_e,result:{signature:l,inputSize:w,outputSize:h}})}catch(e){Ne(e)}}async function Ue(e){for(const t of e)await import(t)}function Ke(e){let{value:t}=e;if(t)if(t.length)try{t=new i(t),e.value=t.buffer,d(e,[e.value])}catch(t){d(e)}else d(e);else d(e)}function Ne(e=new s("Unknown error")){const{message:t,stack:n,code:r,name:i}=e;d({error:{message:t,stack:n,code:r,name:i}})}addEventListener("message",(({data:e})=>{const{type:t,messageId:n,value:r,done:s}=e;try{if("start"==t&&Me(e),t==Ae){const e=De.get(n);De.delete(n),e({value:new i(r),done:s})}if("ack"==t){const e=Ve.get(n);Ve.delete(n),e()}t==_e&&Re.abort()}catch(e){Ne(e)}}));const Oe=-2;function Te(t){return We(t.map((([t,n])=>new e(t).fill(n,0,t))))}function We(t){return t.reduce(((t,n)=>t.concat(e.isArray(n)?We(n):n)),[])}const je=[0,1,2,3].concat(...Te([[2,4],[2,5],[4,6],[4,7],[8,8],[8,9],[16,10],[16,11],[32,12],[32,13],[64,14],[64,15],[2,0],[1,16],[1,17],[2,18],[2,19],[4,20],[4,21],[8,22],[8,23],[16,24],[16,25],[32,26],[32,27],[64,28],[64,29]]));function He(){const e=this;function t(e,t){let n=0;do{n|=1&e,e>>>=1,n<<=1}while(--t>0);return n>>>1}e.ne=n=>{const s=e.re,i=e.ie.se,o=e.ie.oe;let c,f,a,l=-1;for(n.ce=0,n.fe=573,c=0;o>c;c++)0!==s[2*c]?(n.ae[++n.ce]=l=c,n.le[c]=0):s[2*c+1]=0;for(;2>n.ce;)a=n.ae[++n.ce]=2>l?++l:0,s[2*a]=1,n.le[a]=0,n.ue--,i&&(n.we-=i[2*a+1]);for(e.he=l,c=r.floor(n.ce/2);c>=1;c--)n.de(s,c);a=o;do{c=n.ae[1],n.ae[1]=n.ae[n.ce--],n.de(s,1),f=n.ae[1],n.ae[--n.fe]=c,n.ae[--n.fe]=f,s[2*a]=s[2*c]+s[2*f],n.le[a]=r.max(n.le[c],n.le[f])+1,s[2*c+1]=s[2*f+1]=a,n.ae[1]=a++,n.de(s,1)}while(n.ce>=2);n.ae[--n.fe]=n.ae[1],(t=>{const n=e.re,r=e.ie.se,s=e.ie.pe,i=e.ie.ye,o=e.ie.me;let c,f,a,l,u,w,h=0;for(l=0;15>=l;l++)t.be[l]=0;for(n[2*t.ae[t.fe]+1]=0,c=t.fe+1;573>c;c++)f=t.ae[c],l=n[2*n[2*f+1]+1]+1,l>o&&(l=o,h++),n[2*f+1]=l,f>e.he||(t.be[l]++,u=0,i>f||(u=s[f-i]),w=n[2*f],t.ue+=w*(l+u),r&&(t.we+=w*(r[2*f+1]+u)));if(0!==h){do{for(l=o-1;0===t.be[l];)l--;t.be[l]--,t.be[l+1]+=2,t.be[o]--,h-=2}while(h>0);for(l=o;0!==l;l--)for(f=t.be[l];0!==f;)a=t.ae[--c],a>e.he||(n[2*a+1]!=l&&(t.ue+=(l-n[2*a+1])*n[2*a],n[2*a+1]=l),f--)}})(n),((e,n,r)=>{const s=[];let i,o,c,f=0;for(i=1;15>=i;i++)s[i]=f=f+r[i-1]<<1;for(o=0;n>=o;o++)c=e[2*o+1],0!==c&&(e[2*o]=t(s[c]++,c))})(s,e.he,n.be)}}function Le(e,t,n,r,s){const i=this;i.se=e,i.pe=t,i.ye=n,i.oe=r,i.me=s}He.ge=[0,1,2,3,4,5,6,7].concat(...Te([[2,8],[2,9],[2,10],[2,11],[4,12],[4,13],[4,14],[4,15],[8,16],[8,17],[8,18],[8,19],[16,20],[16,21],[16,22],[16,23],[32,24],[32,25],[32,26],[31,27],[1,28]])),He.ke=[0,1,2,3,4,5,6,7,8,10,12,14,16,20,24,28,32,40,48,56,64,80,96,112,128,160,192,224,0],He.ve=[0,1,2,3,4,6,8,12,16,24,32,48,64,96,128,192,256,384,512,768,1024,1536,2048,3072,4096,6144,8192,12288,16384,24576],He.Se=e=>256>e?je[e]:je[256+(e>>>7)],He.ze=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0],He.Ce=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13],He.xe=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,3,7],He.Ae=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];const Fe=Te([[144,8],[112,9],[24,7],[8,8]]);Le._e=We([12,140,76,204,44,172,108,236,28,156,92,220,60,188,124,252,2,130,66,194,34,162,98,226,18,146,82,210,50,178,114,242,10,138,74,202,42,170,106,234,26,154,90,218,58,186,122,250,6,134,70,198,38,166,102,230,22,150,86,214,54,182,118,246,14,142,78,206,46,174,110,238,30,158,94,222,62,190,126,254,1,129,65,193,33,161,97,225,17,145,81,209,49,177,113,241,9,137,73,201,41,169,105,233,25,153,89,217,57,185,121,249,5,133,69,197,37,165,101,229,21,149,85,213,53,181,117,245,13,141,77,205,45,173,109,237,29,157,93,221,61,189,125,253,19,275,147,403,83,339,211,467,51,307,179,435,115,371,243,499,11,267,139,395,75,331,203,459,43,299,171,427,107,363,235,491,27,283,155,411,91,347,219,475,59,315,187,443,123,379,251,507,7,263,135,391,71,327,199,455,39,295,167,423,103,359,231,487,23,279,151,407,87,343,215,471,55,311,183,439,119,375,247,503,15,271,143,399,79,335,207,463,47,303,175,431,111,367,239,495,31,287,159,415,95,351,223,479,63,319,191,447,127,383,255,511,0,64,32,96,16,80,48,112,8,72,40,104,24,88,56,120,4,68,36,100,20,84,52,116,3,131,67,195,35,163,99,227].map(((e,t)=>[e,Fe[t]])));const qe=Te([[30,5]]);function Ge(e,t,n,r,s){const i=this;i.Ie=e,i.Pe=t,i.De=n,i.Ve=r,i.Re=s}Le.Be=We([0,16,8,24,4,20,12,28,2,18,10,26,6,22,14,30,1,17,9,25,5,21,13,29,3,19,11,27,7,23].map(((e,t)=>[e,qe[t]]))),Le.Ee=new Le(Le._e,He.ze,257,286,15),Le.Me=new Le(Le.Be,He.Ce,0,30,15),Le.Ue=new Le(null,He.xe,0,19,7);const Je=[new Ge(0,0,0,0,0),new Ge(4,4,8,4,1),new Ge(4,5,16,8,1),new Ge(4,6,32,32,1),new Ge(4,4,16,16,2),new Ge(8,16,32,32,2),new Ge(8,16,128,128,2),new Ge(8,32,128,256,2),new Ge(32,128,258,1024,2),new Ge(32,258,258,4096,2)],Qe=["need dictionary","stream end","","","stream error","data error","","buffer error","",""],Xe=113,Ye=666,Ze=262;function $e(e,t,n,r){const s=e[2*t],i=e[2*n];return i>s||s==i&&r[t]<=r[n]}function et(){const e=this;let t,n,s,c,f,a,l,u,w,h,d,p,y,m,b,g,k,v,S,z,C,x,A,_,I,P,D,V,R,B,E,M,U;const K=new He,N=new He,O=new He;let T,W,j,H,L,F;function q(){let t;for(t=0;286>t;t++)E[2*t]=0;for(t=0;30>t;t++)M[2*t]=0;for(t=0;19>t;t++)U[2*t]=0;E[512]=1,e.ue=e.we=0,W=j=0}function G(e,t){let n,r=-1,s=e[1],i=0,o=7,c=4;0===s&&(o=138,c=3),e[2*(t+1)+1]=65535;for(let f=0;t>=f;f++)n=s,s=e[2*(f+1)+1],++i<o&&n==s||(c>i?U[2*n]+=i:0!==n?(n!=r&&U[2*n]++,U[32]++):i>10?U[36]++:U[34]++,i=0,r=n,0===s?(o=138,c=3):n==s?(o=6,c=3):(o=7,c=4))}function J(t){e.Ke[e.pending++]=t}function Q(e){J(255&e),J(e>>>8&255)}function X(e,t){let n;const r=t;F>16-r?(n=e,L|=n<<F&65535,Q(L),L=n>>>16-F,F+=r-16):(L|=e<<F&65535,F+=r)}function Y(e,t){const n=2*e;X(65535&t[n],65535&t[n+1])}function Z(e,t){let n,r,s=-1,i=e[1],o=0,c=7,f=4;for(0===i&&(c=138,f=3),n=0;t>=n;n++)if(r=i,i=e[2*(n+1)+1],++o>=c||r!=i){if(f>o)do{Y(r,U)}while(0!=--o);else 0!==r?(r!=s&&(Y(r,U),o--),Y(16,U),X(o-3,2)):o>10?(Y(18,U),X(o-11,7)):(Y(17,U),X(o-3,3));o=0,s=r,0===i?(c=138,f=3):r==i?(c=6,f=3):(c=7,f=4)}}function $(){16==F?(Q(L),L=0,F=0):8>F||(J(255&L),L>>>=8,F-=8)}function ee(t,n){let s,i,o;if(e.Ne[W]=t,e.Oe[W]=255&n,W++,0===t?E[2*n]++:(j++,t--,E[2*(He.ge[n]+256+1)]++,M[2*He.Se(t)]++),!(8191&W)&&D>2){for(s=8*W,i=C-k,o=0;30>o;o++)s+=M[2*o]*(5+He.Ce[o]);if(s>>>=3,j<r.floor(W/2)&&s<r.floor(i/2))return!0}return W==T-1}function te(t,n){let r,s,i,o,c=0;if(0!==W)do{r=e.Ne[c],s=e.Oe[c],c++,0===r?Y(s,t):(i=He.ge[s],Y(i+256+1,t),o=He.ze[i],0!==o&&(s-=He.ke[i],X(s,o)),r--,i=He.Se(r),Y(i,n),o=He.Ce[i],0!==o&&(r-=He.ve[i],X(r,o)))}while(W>c);Y(256,t),H=t[513]}function ne(){F>8?Q(L):F>0&&J(255&L),L=0,F=0}function re(t,n,r){X(0+(r?1:0),3),((t,n)=>{ne(),H=8,Q(n),Q(~n),e.Ke.set(u.subarray(t,t+n),e.pending),e.pending+=n})(t,n)}function se(n){((t,n,r)=>{let s,i,o=0;D>0?(K.ne(e),N.ne(e),o=(()=>{let t;for(G(E,K.he),G(M,N.he),O.ne(e),t=18;t>=3&&0===U[2*He.Ae[t]+1];t--);return e.ue+=14+3*(t+1),t})(),s=e.ue+3+7>>>3,i=e.we+3+7>>>3,i>s||(s=i)):s=i=n+5,n+4>s||-1==t?i==s?(X(2+(r?1:0),3),te(Le._e,Le.Be)):(X(4+(r?1:0),3),((e,t,n)=>{let r;for(X(e-257,5),X(t-1,5),X(n-4,4),r=0;n>r;r++)X(U[2*He.Ae[r]+1],3);Z(E,e-1),Z(M,t-1)})(K.he+1,N.he+1,o+1),te(E,M)):re(t,n,r),q(),r&&ne()})(0>k?-1:k,C-k,n),k=C,t.Te()}function ie(){let e,n,r,s;do{if(s=w-A-C,0===s&&0===C&&0===A)s=f;else if(-1==s)s--;else if(C>=f+f-Ze){u.set(u.subarray(f,f+f),0),x-=f,C-=f,k-=f,e=y,r=e;do{n=65535&d[--r],d[r]=f>n?0:n-f}while(0!=--e);e=f,r=e;do{n=65535&h[--r],h[r]=f>n?0:n-f}while(0!=--e);s+=f}if(0===t.We)return;e=t.je(u,C+A,s),A+=e,3>A||(p=255&u[C],p=(p<<g^255&u[C+1])&b)}while(Ze>A&&0!==t.We)}function oe(e){let t,n,r=I,s=C,i=_;const o=C>f-Ze?C-(f-Ze):0;let c=B;const a=l,w=C+258;let d=u[s+i-1],p=u[s+i];R>_||(r>>=2),c>A&&(c=A);do{if(t=e,u[t+i]==p&&u[t+i-1]==d&&u[t]==u[s]&&u[++t]==u[s+1]){s+=2,t++;do{}while(u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&u[++s]==u[++t]&&w>s);if(n=258-(w-s),s=w-258,n>i){if(x=e,i=n,n>=c)break;d=u[s+i-1],p=u[s+i]}}}while((e=65535&h[e&a])>o&&0!=--r);return i>A?A:i}e.le=[],e.be=[],e.ae=[],E=[],M=[],U=[],e.de=(t,n)=>{const r=e.ae,s=r[n];let i=n<<1;for(;i<=e.ce&&(i<e.ce&&$e(t,r[i+1],r[i],e.le)&&i++,!$e(t,s,r[i],e.le));)r[n]=r[i],n=i,i<<=1;r[n]=s},e.He=(t,S,x,W,j,G)=>(W||(W=8),j||(j=8),G||(G=0),t.Le=null,-1==S&&(S=6),1>j||j>9||8!=W||9>x||x>15||0>S||S>9||0>G||G>2?Oe:(t.Fe=e,a=x,f=1<<a,l=f-1,m=j+7,y=1<<m,b=y-1,g=r.floor((m+3-1)/3),u=new i(2*f),h=[],d=[],T=1<<j+6,e.Ke=new i(4*T),s=4*T,e.Ne=new o(T),e.Oe=new i(T),D=S,V=G,(t=>(t.qe=t.Ge=0,t.Le=null,e.pending=0,e.Je=0,n=Xe,c=0,K.re=E,K.ie=Le.Ee,N.re=M,N.ie=Le.Me,O.re=U,O.ie=Le.Ue,L=0,F=0,H=8,q(),(()=>{w=2*f,d[y-1]=0;for(let e=0;y-1>e;e++)d[e]=0;P=Je[D].Pe,R=Je[D].Ie,B=Je[D].De,I=Je[D].Ve,C=0,k=0,A=0,v=_=2,z=0,p=0})(),0))(t))),e.Qe=()=>42!=n&&n!=Xe&&n!=Ye?Oe:(e.Oe=null,e.Ne=null,e.Ke=null,d=null,h=null,u=null,e.Fe=null,n==Xe?-3:0),e.Xe=(e,t,n)=>{let r=0;return-1==t&&(t=6),0>t||t>9||0>n||n>2?Oe:(Je[D].Re!=Je[t].Re&&0!==e.qe&&(r=e.Ye(1)),D!=t&&(D=t,P=Je[D].Pe,R=Je[D].Ie,B=Je[D].De,I=Je[D].Ve),V=n,r)},e.Ze=(e,t,r)=>{let s,i=r,o=0;if(!t||42!=n)return Oe;if(3>i)return 0;for(i>f-Ze&&(i=f-Ze,o=r-i),u.set(t.subarray(o,o+i),0),C=i,k=i,p=255&u[0],p=(p<<g^255&u[1])&b,s=0;i-3>=s;s++)p=(p<<g^255&u[s+2])&b,h[s&l]=d[p],d[p]=s;return 0},e.Ye=(r,i)=>{let o,w,m,I,R;if(i>4||0>i)return Oe;if(!r.$e||!r.et&&0!==r.We||n==Ye&&4!=i)return r.Le=Qe[4],Oe;if(0===r.tt)return r.Le=Qe[7],-5;var B;if(t=r,I=c,c=i,42==n&&(w=8+(a-8<<4)<<8,m=(D-1&255)>>1,m>3&&(m=3),w|=m<<6,0!==C&&(w|=32),w+=31-w%31,n=Xe,J((B=w)>>8&255),J(255&B)),0!==e.pending){if(t.Te(),0===t.tt)return c=-1,0}else if(0===t.We&&I>=i&&4!=i)return t.Le=Qe[7],-5;if(n==Ye&&0!==t.We)return r.Le=Qe[7],-5;if(0!==t.We||0!==A||0!=i&&n!=Ye){switch(R=-1,Je[D].Re){case 0:R=(e=>{let n,r=65535;for(r>s-5&&(r=s-5);;){if(1>=A){if(ie(),0===A&&0==e)return 0;if(0===A)break}if(C+=A,A=0,n=k+r,(0===C||C>=n)&&(A=C-n,C=n,se(!1),0===t.tt))return 0;if(C-k>=f-Ze&&(se(!1),0===t.tt))return 0}return se(4==e),0===t.tt?4==e?2:0:4==e?3:1})(i);break;case 1:R=(e=>{let n,r=0;for(;;){if(Ze>A){if(ie(),Ze>A&&0==e)return 0;if(0===A)break}if(3>A||(p=(p<<g^255&u[C+2])&b,r=65535&d[p],h[C&l]=d[p],d[p]=C),0===r||(C-r&65535)>f-Ze||2!=V&&(v=oe(r)),3>v)n=ee(0,255&u[C]),A--,C++;else if(n=ee(C-x,v-3),A-=v,v>P||3>A)C+=v,v=0,p=255&u[C],p=(p<<g^255&u[C+1])&b;else{v--;do{C++,p=(p<<g^255&u[C+2])&b,r=65535&d[p],h[C&l]=d[p],d[p]=C}while(0!=--v);C++}if(n&&(se(!1),0===t.tt))return 0}return se(4==e),0===t.tt?4==e?2:0:4==e?3:1})(i);break;case 2:R=(e=>{let n,r,s=0;for(;;){if(Ze>A){if(ie(),Ze>A&&0==e)return 0;if(0===A)break}if(3>A||(p=(p<<g^255&u[C+2])&b,s=65535&d[p],h[C&l]=d[p],d[p]=C),_=v,S=x,v=2,0!==s&&P>_&&f-Ze>=(C-s&65535)&&(2!=V&&(v=oe(s)),5>=v&&(1==V||3==v&&C-x>4096)&&(v=2)),3>_||v>_)if(0!==z){if(n=ee(0,255&u[C-1]),n&&se(!1),C++,A--,0===t.tt)return 0}else z=1,C++,A--;else{r=C+A-3,n=ee(C-1-S,_-3),A-=_-1,_-=2;do{++C>r||(p=(p<<g^255&u[C+2])&b,s=65535&d[p],h[C&l]=d[p],d[p]=C)}while(0!=--_);if(z=0,v=2,C++,n&&(se(!1),0===t.tt))return 0}}return 0!==z&&(n=ee(0,255&u[C-1]),z=0),se(4==e),0===t.tt?4==e?2:0:4==e?3:1})(i)}if(2!=R&&3!=R||(n=Ye),0==R||2==R)return 0===t.tt&&(c=-1),0;if(1==R){if(1==i)X(2,3),Y(256,Le._e),$(),9>1+H+10-F&&(X(2,3),Y(256,Le._e),$()),H=7;else if(re(0,0,!1),3==i)for(o=0;y>o;o++)d[o]=0;if(t.Te(),0===t.tt)return c=-1,0}}return 4!=i?0:1}}function tt(){const e=this;e.nt=0,e.rt=0,e.We=0,e.qe=0,e.tt=0,e.Ge=0}function nt(e){const t=new tt,n=(o=e&&e.chunkSize?e.chunkSize:65536)+5*(r.floor(o/16383)+1);var o;const c=new i(n);let f=e?e.level:-1;void 0===f&&(f=-1),t.He(f),t.$e=c,this.append=(e,r)=>{let o,f,a=0,l=0,u=0;const w=[];if(e.length){t.nt=0,t.et=e,t.We=e.length;do{if(t.rt=0,t.tt=n,o=t.Ye(0),0!=o)throw new s("deflating: "+t.Le);t.rt&&(t.rt==n?w.push(new i(c)):w.push(c.subarray(0,t.rt))),u+=t.rt,r&&t.nt>0&&t.nt!=a&&(r(t.nt),a=t.nt)}while(t.We>0||0===t.tt);return w.length>1?(f=new i(u),w.forEach((e=>{f.set(e,l),l+=e.length}))):f=w[0]?new i(w[0]):new i,f}},this.flush=()=>{let e,r,o=0,f=0;const a=[];do{if(t.rt=0,t.tt=n,e=t.Ye(4),1!=e&&0!=e)throw new s("deflating: "+t.Le);n-t.tt>0&&a.push(c.slice(0,t.rt)),f+=t.rt}while(t.We>0||0===t.tt);return t.Qe(),r=new i(f),a.forEach((e=>{r.set(e,o),o+=e.length})),r}}tt.prototype={He(e,t){const n=this;return n.Fe=new et,t||(t=15),n.Fe.He(n,e,t)},Ye(e){const t=this;return t.Fe?t.Fe.Ye(t,e):Oe},Qe(){const e=this;if(!e.Fe)return Oe;const t=e.Fe.Qe();return e.Fe=null,t},Xe(e,t){const n=this;return n.Fe?n.Fe.Xe(n,e,t):Oe},Ze(e,t){const n=this;return n.Fe?n.Fe.Ze(n,e,t):Oe},je(e,t,n){const r=this;let s=r.We;return s>n&&(s=n),0===s?0:(r.We-=s,e.set(r.et.subarray(r.nt,r.nt+s),t),r.nt+=s,r.qe+=s,s)},Te(){const e=this;let t=e.Fe.pending;t>e.tt&&(t=e.tt),0!==t&&(e.$e.set(e.Fe.Ke.subarray(e.Fe.Je,e.Fe.Je+t),e.rt),e.rt+=t,e.Fe.Je+=t,e.Ge+=t,e.tt-=t,e.Fe.pending-=t,0===e.Fe.pending&&(e.Fe.Je=0))}};const rt=-2,st=-3,it=-5,ot=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535],ct=[96,7,256,0,8,80,0,8,16,84,8,115,82,7,31,0,8,112,0,8,48,0,9,192,80,7,10,0,8,96,0,8,32,0,9,160,0,8,0,0,8,128,0,8,64,0,9,224,80,7,6,0,8,88,0,8,24,0,9,144,83,7,59,0,8,120,0,8,56,0,9,208,81,7,17,0,8,104,0,8,40,0,9,176,0,8,8,0,8,136,0,8,72,0,9,240,80,7,4,0,8,84,0,8,20,85,8,227,83,7,43,0,8,116,0,8,52,0,9,200,81,7,13,0,8,100,0,8,36,0,9,168,0,8,4,0,8,132,0,8,68,0,9,232,80,7,8,0,8,92,0,8,28,0,9,152,84,7,83,0,8,124,0,8,60,0,9,216,82,7,23,0,8,108,0,8,44,0,9,184,0,8,12,0,8,140,0,8,76,0,9,248,80,7,3,0,8,82,0,8,18,85,8,163,83,7,35,0,8,114,0,8,50,0,9,196,81,7,11,0,8,98,0,8,34,0,9,164,0,8,2,0,8,130,0,8,66,0,9,228,80,7,7,0,8,90,0,8,26,0,9,148,84,7,67,0,8,122,0,8,58,0,9,212,82,7,19,0,8,106,0,8,42,0,9,180,0,8,10,0,8,138,0,8,74,0,9,244,80,7,5,0,8,86,0,8,22,192,8,0,83,7,51,0,8,118,0,8,54,0,9,204,81,7,15,0,8,102,0,8,38,0,9,172,0,8,6,0,8,134,0,8,70,0,9,236,80,7,9,0,8,94,0,8,30,0,9,156,84,7,99,0,8,126,0,8,62,0,9,220,82,7,27,0,8,110,0,8,46,0,9,188,0,8,14,0,8,142,0,8,78,0,9,252,96,7,256,0,8,81,0,8,17,85,8,131,82,7,31,0,8,113,0,8,49,0,9,194,80,7,10,0,8,97,0,8,33,0,9,162,0,8,1,0,8,129,0,8,65,0,9,226,80,7,6,0,8,89,0,8,25,0,9,146,83,7,59,0,8,121,0,8,57,0,9,210,81,7,17,0,8,105,0,8,41,0,9,178,0,8,9,0,8,137,0,8,73,0,9,242,80,7,4,0,8,85,0,8,21,80,8,258,83,7,43,0,8,117,0,8,53,0,9,202,81,7,13,0,8,101,0,8,37,0,9,170,0,8,5,0,8,133,0,8,69,0,9,234,80,7,8,0,8,93,0,8,29,0,9,154,84,7,83,0,8,125,0,8,61,0,9,218,82,7,23,0,8,109,0,8,45,0,9,186,0,8,13,0,8,141,0,8,77,0,9,250,80,7,3,0,8,83,0,8,19,85,8,195,83,7,35,0,8,115,0,8,51,0,9,198,81,7,11,0,8,99,0,8,35,0,9,166,0,8,3,0,8,131,0,8,67,0,9,230,80,7,7,0,8,91,0,8,27,0,9,150,84,7,67,0,8,123,0,8,59,0,9,214,82,7,19,0,8,107,0,8,43,0,9,182,0,8,11,0,8,139,0,8,75,0,9,246,80,7,5,0,8,87,0,8,23,192,8,0,83,7,51,0,8,119,0,8,55,0,9,206,81,7,15,0,8,103,0,8,39,0,9,174,0,8,7,0,8,135,0,8,71,0,9,238,80,7,9,0,8,95,0,8,31,0,9,158,84,7,99,0,8,127,0,8,63,0,9,222,82,7,27,0,8,111,0,8,47,0,9,190,0,8,15,0,8,143,0,8,79,0,9,254,96,7,256,0,8,80,0,8,16,84,8,115,82,7,31,0,8,112,0,8,48,0,9,193,80,7,10,0,8,96,0,8,32,0,9,161,0,8,0,0,8,128,0,8,64,0,9,225,80,7,6,0,8,88,0,8,24,0,9,145,83,7,59,0,8,120,0,8,56,0,9,209,81,7,17,0,8,104,0,8,40,0,9,177,0,8,8,0,8,136,0,8,72,0,9,241,80,7,4,0,8,84,0,8,20,85,8,227,83,7,43,0,8,116,0,8,52,0,9,201,81,7,13,0,8,100,0,8,36,0,9,169,0,8,4,0,8,132,0,8,68,0,9,233,80,7,8,0,8,92,0,8,28,0,9,153,84,7,83,0,8,124,0,8,60,0,9,217,82,7,23,0,8,108,0,8,44,0,9,185,0,8,12,0,8,140,0,8,76,0,9,249,80,7,3,0,8,82,0,8,18,85,8,163,83,7,35,0,8,114,0,8,50,0,9,197,81,7,11,0,8,98,0,8,34,0,9,165,0,8,2,0,8,130,0,8,66,0,9,229,80,7,7,0,8,90,0,8,26,0,9,149,84,7,67,0,8,122,0,8,58,0,9,213,82,7,19,0,8,106,0,8,42,0,9,181,0,8,10,0,8,138,0,8,74,0,9,245,80,7,5,0,8,86,0,8,22,192,8,0,83,7,51,0,8,118,0,8,54,0,9,205,81,7,15,0,8,102,0,8,38,0,9,173,0,8,6,0,8,134,0,8,70,0,9,237,80,7,9,0,8,94,0,8,30,0,9,157,84,7,99,0,8,126,0,8,62,0,9,221,82,7,27,0,8,110,0,8,46,0,9,189,0,8,14,0,8,142,0,8,78,0,9,253,96,7,256,0,8,81,0,8,17,85,8,131,82,7,31,0,8,113,0,8,49,0,9,195,80,7,10,0,8,97,0,8,33,0,9,163,0,8,1,0,8,129,0,8,65,0,9,227,80,7,6,0,8,89,0,8,25,0,9,147,83,7,59,0,8,121,0,8,57,0,9,211,81,7,17,0,8,105,0,8,41,0,9,179,0,8,9,0,8,137,0,8,73,0,9,243,80,7,4,0,8,85,0,8,21,80,8,258,83,7,43,0,8,117,0,8,53,0,9,203,81,7,13,0,8,101,0,8,37,0,9,171,0,8,5,0,8,133,0,8,69,0,9,235,80,7,8,0,8,93,0,8,29,0,9,155,84,7,83,0,8,125,0,8,61,0,9,219,82,7,23,0,8,109,0,8,45,0,9,187,0,8,13,0,8,141,0,8,77,0,9,251,80,7,3,0,8,83,0,8,19,85,8,195,83,7,35,0,8,115,0,8,51,0,9,199,81,7,11,0,8,99,0,8,35,0,9,167,0,8,3,0,8,131,0,8,67,0,9,231,80,7,7,0,8,91,0,8,27,0,9,151,84,7,67,0,8,123,0,8,59,0,9,215,82,7,19,0,8,107,0,8,43,0,9,183,0,8,11,0,8,139,0,8,75,0,9,247,80,7,5,0,8,87,0,8,23,192,8,0,83,7,51,0,8,119,0,8,55,0,9,207,81,7,15,0,8,103,0,8,39,0,9,175,0,8,7,0,8,135,0,8,71,0,9,239,80,7,9,0,8,95,0,8,31,0,9,159,84,7,99,0,8,127,0,8,63,0,9,223,82,7,27,0,8,111,0,8,47,0,9,191,0,8,15,0,8,143,0,8,79,0,9,255],ft=[80,5,1,87,5,257,83,5,17,91,5,4097,81,5,5,89,5,1025,85,5,65,93,5,16385,80,5,3,88,5,513,84,5,33,92,5,8193,82,5,9,90,5,2049,86,5,129,192,5,24577,80,5,2,87,5,385,83,5,25,91,5,6145,81,5,7,89,5,1537,85,5,97,93,5,24577,80,5,4,88,5,769,84,5,49,92,5,12289,82,5,13,90,5,3073,86,5,193,192,5,24577],at=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258,0,0],lt=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0,112,112],ut=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577],wt=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];function ht(){let e,t,n,r,s,i;function o(e,t,o,c,f,a,l,u,w,h,d){let p,y,m,b,g,k,v,S,z,C,x,A,_,I,P;C=0,g=o;do{n[e[t+C]]++,C++,g--}while(0!==g);if(n[0]==o)return l[0]=-1,u[0]=0,0;for(S=u[0],k=1;15>=k&&0===n[k];k++);for(v=k,k>S&&(S=k),g=15;0!==g&&0===n[g];g--);for(m=g,S>g&&(S=g),u[0]=S,I=1<<k;g>k;k++,I<<=1)if(0>(I-=n[k]))return st;if(0>(I-=n[g]))return st;for(n[g]+=I,i[1]=k=0,C=1,_=2;0!=--g;)i[_]=k+=n[C],_++,C++;g=0,C=0;do{0!==(k=e[t+C])&&(d[i[k]++]=g),C++}while(++g<o);for(o=i[m],i[0]=g=0,C=0,b=-1,A=-S,s[0]=0,x=0,P=0;m>=v;v++)for(p=n[v];0!=p--;){for(;v>A+S;){if(b++,A+=S,P=m-A,P=P>S?S:P,(y=1<<(k=v-A))>p+1&&(y-=p+1,_=v,P>k))for(;++k<P&&(y<<=1)>n[++_];)y-=n[_];if(P=1<<k,h[0]+P>1440)return st;s[b]=x=h[0],h[0]+=P,0!==b?(i[b]=g,r[0]=k,r[1]=S,k=g>>>A-S,r[2]=x-s[b-1]-k,w.set(r,3*(s[b-1]+k))):l[0]=x}for(r[1]=v-A,o>C?d[C]<c?(r[0]=256>d[C]?0:96,r[2]=d[C++]):(r[0]=a[d[C]-c]+16+64,r[2]=f[d[C++]-c]):r[0]=192,y=1<<v-A,k=g>>>A;P>k;k+=y)w.set(r,3*(x+k));for(k=1<<v-1;g&k;k>>>=1)g^=k;for(g^=k,z=(1<<A)-1;(g&z)!=i[b];)b--,A-=S,z=(1<<A)-1}return 0!==I&&1!=m?it:0}function c(o){let c;for(e||(e=[],t=[],n=new f(16),r=[],s=new f(15),i=new f(16)),t.length<o&&(t=[]),c=0;o>c;c++)t[c]=0;for(c=0;16>c;c++)n[c]=0;for(c=0;3>c;c++)r[c]=0;s.set(n.subarray(0,15),0),i.set(n.subarray(0,16),0)}this.st=(n,r,s,i,f)=>{let a;return c(19),e[0]=0,a=o(n,0,19,19,null,null,s,r,i,e,t),a==st?f.Le="oversubscribed dynamic bit lengths tree":a!=it&&0!==r[0]||(f.Le="incomplete dynamic bit lengths tree",a=st),a},this.it=(n,r,s,i,f,a,l,u,w)=>{let h;return c(288),e[0]=0,h=o(s,0,n,257,at,lt,a,i,u,e,t),0!=h||0===i[0]?(h==st?w.Le="oversubscribed literal/length tree":-4!=h&&(w.Le="incomplete literal/length tree",h=st),h):(c(288),h=o(s,n,r,0,ut,wt,l,f,u,e,t),0!=h||0===f[0]&&n>257?(h==st?w.Le="oversubscribed distance tree":h==it?(w.Le="incomplete distance tree",h=st):-4!=h&&(w.Le="empty distance tree with lengths",h=st),h):0)}}function dt(){const e=this;let t,n,r,s,i=0,o=0,c=0,f=0,a=0,l=0,u=0,w=0,h=0,d=0;function p(e,t,n,r,s,i,o,c){let f,a,l,u,w,h,d,p,y,m,b,g,k,v,S,z;d=c.nt,p=c.We,w=o.ot,h=o.ct,y=o.write,m=y<o.read?o.read-y-1:o.end-y,b=ot[e],g=ot[t];do{for(;20>h;)p--,w|=(255&c.ft(d++))<<h,h+=8;if(f=w&b,a=n,l=r,z=3*(l+f),0!==(u=a[z]))for(;;){if(w>>=a[z+1],h-=a[z+1],16&u){for(u&=15,k=a[z+2]+(w&ot[u]),w>>=u,h-=u;15>h;)p--,w|=(255&c.ft(d++))<<h,h+=8;for(f=w&g,a=s,l=i,z=3*(l+f),u=a[z];;){if(w>>=a[z+1],h-=a[z+1],16&u){for(u&=15;u>h;)p--,w|=(255&c.ft(d++))<<h,h+=8;if(v=a[z+2]+(w&ot[u]),w>>=u,h-=u,m-=k,v>y){S=y-v;do{S+=o.end}while(0>S);if(u=o.end-S,k>u){if(k-=u,y-S>0&&u>y-S)do{o.lt[y++]=o.lt[S++]}while(0!=--u);else o.lt.set(o.lt.subarray(S,S+u),y),y+=u,S+=u,u=0;S=0}}else S=y-v,y-S>0&&2>y-S?(o.lt[y++]=o.lt[S++],o.lt[y++]=o.lt[S++],k-=2):(o.lt.set(o.lt.subarray(S,S+2),y),y+=2,S+=2,k-=2);if(y-S>0&&k>y-S)do{o.lt[y++]=o.lt[S++]}while(0!=--k);else o.lt.set(o.lt.subarray(S,S+k),y),y+=k,S+=k,k=0;break}if(64&u)return c.Le="invalid distance code",k=c.We-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ot=w,o.ct=h,c.We=p,c.qe+=d-c.nt,c.nt=d,o.write=y,st;f+=a[z+2],f+=w&ot[u],z=3*(l+f),u=a[z]}break}if(64&u)return 32&u?(k=c.We-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ot=w,o.ct=h,c.We=p,c.qe+=d-c.nt,c.nt=d,o.write=y,1):(c.Le="invalid literal/length code",k=c.We-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ot=w,o.ct=h,c.We=p,c.qe+=d-c.nt,c.nt=d,o.write=y,st);if(f+=a[z+2],f+=w&ot[u],z=3*(l+f),0===(u=a[z])){w>>=a[z+1],h-=a[z+1],o.lt[y++]=a[z+2],m--;break}}else w>>=a[z+1],h-=a[z+1],o.lt[y++]=a[z+2],m--}while(m>=258&&p>=10);return k=c.We-p,k=k>h>>3?h>>3:k,p+=k,d-=k,h-=k<<3,o.ot=w,o.ct=h,c.We=p,c.qe+=d-c.nt,c.nt=d,o.write=y,0}e.init=(e,i,o,c,f,a)=>{t=0,u=e,w=i,r=o,h=c,s=f,d=a,n=null},e.ut=(e,y,m)=>{let b,g,k,v,S,z,C,x=0,A=0,_=0;for(_=y.nt,v=y.We,x=e.ot,A=e.ct,S=e.write,z=S<e.read?e.read-S-1:e.end-S;;)switch(t){case 0:if(z>=258&&v>=10&&(e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,m=p(u,w,r,h,s,d,e,y),_=y.nt,v=y.We,x=e.ot,A=e.ct,S=e.write,z=S<e.read?e.read-S-1:e.end-S,0!=m)){t=1==m?7:9;break}c=u,n=r,o=h,t=1;case 1:for(b=c;b>A;){if(0===v)return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);m=0,v--,x|=(255&y.ft(_++))<<A,A+=8}if(g=3*(o+(x&ot[b])),x>>>=n[g+1],A-=n[g+1],k=n[g],0===k){f=n[g+2],t=6;break}if(16&k){a=15&k,i=n[g+2],t=2;break}if(!(64&k)){c=k,o=g/3+n[g+2];break}if(32&k){t=7;break}return t=9,y.Le="invalid literal/length code",m=st,e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);case 2:for(b=a;b>A;){if(0===v)return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);m=0,v--,x|=(255&y.ft(_++))<<A,A+=8}i+=x&ot[b],x>>=b,A-=b,c=w,n=s,o=d,t=3;case 3:for(b=c;b>A;){if(0===v)return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);m=0,v--,x|=(255&y.ft(_++))<<A,A+=8}if(g=3*(o+(x&ot[b])),x>>=n[g+1],A-=n[g+1],k=n[g],16&k){a=15&k,l=n[g+2],t=4;break}if(!(64&k)){c=k,o=g/3+n[g+2];break}return t=9,y.Le="invalid distance code",m=st,e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);case 4:for(b=a;b>A;){if(0===v)return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);m=0,v--,x|=(255&y.ft(_++))<<A,A+=8}l+=x&ot[b],x>>=b,A-=b,t=5;case 5:for(C=S-l;0>C;)C+=e.end;for(;0!==i;){if(0===z&&(S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z&&(e.write=S,m=e.wt(y,m),S=e.write,z=S<e.read?e.read-S-1:e.end-S,S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z)))return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);e.lt[S++]=e.lt[C++],z--,C==e.end&&(C=0),i--}t=0;break;case 6:if(0===z&&(S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z&&(e.write=S,m=e.wt(y,m),S=e.write,z=S<e.read?e.read-S-1:e.end-S,S==e.end&&0!==e.read&&(S=0,z=S<e.read?e.read-S-1:e.end-S),0===z)))return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);m=0,e.lt[S++]=f,z--,t=0;break;case 7:if(A>7&&(A-=8,v++,_--),e.write=S,m=e.wt(y,m),S=e.write,z=S<e.read?e.read-S-1:e.end-S,e.read!=e.write)return e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);t=8;case 8:return m=1,e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);case 9:return m=st,e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m);default:return m=rt,e.ot=x,e.ct=A,y.We=v,y.qe+=_-y.nt,y.nt=_,e.write=S,e.wt(y,m)}},e.ht=()=>{}}ht.dt=(e,t,n,r)=>(e[0]=9,t[0]=5,n[0]=ct,r[0]=ft,0);const pt=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];function yt(e,t){const n=this;let r,s=0,o=0,c=0,a=0;const l=[0],u=[0],w=new dt;let h=0,d=new f(4320);const p=new ht;n.ct=0,n.ot=0,n.lt=new i(t),n.end=t,n.read=0,n.write=0,n.reset=(e,t)=>{t&&(t[0]=0),6==s&&w.ht(e),s=0,n.ct=0,n.ot=0,n.read=n.write=0},n.reset(e,null),n.wt=(e,t)=>{let r,s,i;return s=e.rt,i=n.read,r=(i>n.write?n.end:n.write)-i,r>e.tt&&(r=e.tt),0!==r&&t==it&&(t=0),e.tt-=r,e.Ge+=r,e.$e.set(n.lt.subarray(i,i+r),s),s+=r,i+=r,i==n.end&&(i=0,n.write==n.end&&(n.write=0),r=n.write-i,r>e.tt&&(r=e.tt),0!==r&&t==it&&(t=0),e.tt-=r,e.Ge+=r,e.$e.set(n.lt.subarray(i,i+r),s),s+=r,i+=r),e.rt=s,n.read=i,t},n.ut=(e,t)=>{let i,f,y,m,b,g,k,v;for(m=e.nt,b=e.We,f=n.ot,y=n.ct,g=n.write,k=g<n.read?n.read-g-1:n.end-g;;){let S,z,C,x,A,_,I,P;switch(s){case 0:for(;3>y;){if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);t=0,b--,f|=(255&e.ft(m++))<<y,y+=8}switch(i=7&f,h=1&i,i>>>1){case 0:f>>>=3,y-=3,i=7&y,f>>>=i,y-=i,s=1;break;case 1:S=[],z=[],C=[[]],x=[[]],ht.dt(S,z,C,x),w.init(S[0],z[0],C[0],0,x[0],0),f>>>=3,y-=3,s=6;break;case 2:f>>>=3,y-=3,s=3;break;case 3:return f>>>=3,y-=3,s=9,e.Le="invalid block type",t=st,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t)}break;case 1:for(;32>y;){if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);t=0,b--,f|=(255&e.ft(m++))<<y,y+=8}if((~f>>>16&65535)!=(65535&f))return s=9,e.Le="invalid stored block lengths",t=st,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);o=65535&f,f=y=0,s=0!==o?2:0!==h?7:0;break;case 2:if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);if(0===k&&(g==n.end&&0!==n.read&&(g=0,k=g<n.read?n.read-g-1:n.end-g),0===k&&(n.write=g,t=n.wt(e,t),g=n.write,k=g<n.read?n.read-g-1:n.end-g,g==n.end&&0!==n.read&&(g=0,k=g<n.read?n.read-g-1:n.end-g),0===k)))return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);if(t=0,i=o,i>b&&(i=b),i>k&&(i=k),n.lt.set(e.je(m,i),g),m+=i,b-=i,g+=i,k-=i,0!=(o-=i))break;s=0!==h?7:0;break;case 3:for(;14>y;){if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);t=0,b--,f|=(255&e.ft(m++))<<y,y+=8}if(c=i=16383&f,(31&i)>29||(i>>5&31)>29)return s=9,e.Le="too many length or distance symbols",t=st,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);if(i=258+(31&i)+(i>>5&31),!r||r.length<i)r=[];else for(v=0;i>v;v++)r[v]=0;f>>>=14,y-=14,a=0,s=4;case 4:for(;4+(c>>>10)>a;){for(;3>y;){if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);t=0,b--,f|=(255&e.ft(m++))<<y,y+=8}r[pt[a++]]=7&f,f>>>=3,y-=3}for(;19>a;)r[pt[a++]]=0;if(l[0]=7,i=p.st(r,l,u,d,e),0!=i)return(t=i)==st&&(r=null,s=9),n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);a=0,s=5;case 5:for(;i=c,258+(31&i)+(i>>5&31)>a;){let o,w;for(i=l[0];i>y;){if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);t=0,b--,f|=(255&e.ft(m++))<<y,y+=8}if(i=d[3*(u[0]+(f&ot[i]))+1],w=d[3*(u[0]+(f&ot[i]))+2],16>w)f>>>=i,y-=i,r[a++]=w;else{for(v=18==w?7:w-14,o=18==w?11:3;i+v>y;){if(0===b)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);t=0,b--,f|=(255&e.ft(m++))<<y,y+=8}if(f>>>=i,y-=i,o+=f&ot[v],f>>>=v,y-=v,v=a,i=c,v+o>258+(31&i)+(i>>5&31)||16==w&&1>v)return r=null,s=9,e.Le="invalid bit length repeat",t=st,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);w=16==w?r[v-1]:0;do{r[v++]=w}while(0!=--o);a=v}}if(u[0]=-1,A=[],_=[],I=[],P=[],A[0]=9,_[0]=6,i=c,i=p.it(257+(31&i),1+(i>>5&31),r,A,_,I,P,d,e),0!=i)return i==st&&(r=null,s=9),t=i,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);w.init(A[0],_[0],d,I[0],d,P[0]),s=6;case 6:if(n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,1!=(t=w.ut(n,e,t)))return n.wt(e,t);if(t=0,w.ht(e),m=e.nt,b=e.We,f=n.ot,y=n.ct,g=n.write,k=g<n.read?n.read-g-1:n.end-g,0===h){s=0;break}s=7;case 7:if(n.write=g,t=n.wt(e,t),g=n.write,k=g<n.read?n.read-g-1:n.end-g,n.read!=n.write)return n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);s=8;case 8:return t=1,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);case 9:return t=st,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t);default:return t=rt,n.ot=f,n.ct=y,e.We=b,e.qe+=m-e.nt,e.nt=m,n.write=g,n.wt(e,t)}}},n.ht=e=>{n.reset(e,null),n.lt=null,d=null},n.yt=(e,t,r)=>{n.lt.set(e.subarray(t,t+r),0),n.read=n.write=r},n.bt=()=>1==s?1:0}const mt=13,bt=[0,0,255,255];function gt(){const e=this;function t(e){return e&&e.gt?(e.qe=e.Ge=0,e.Le=null,e.gt.mode=7,e.gt.kt.reset(e,null),0):rt}e.mode=0,e.method=0,e.vt=[0],e.St=0,e.marker=0,e.zt=0,e.Ct=t=>(e.kt&&e.kt.ht(t),e.kt=null,0),e.xt=(n,r)=>(n.Le=null,e.kt=null,8>r||r>15?(e.Ct(n),rt):(e.zt=r,n.gt.kt=new yt(n,1<<r),t(n),0)),e.At=(e,t)=>{let n,r;if(!e||!e.gt||!e.et)return rt;const s=e.gt;for(t=4==t?it:0,n=it;;)switch(s.mode){case 0:if(0===e.We)return n;if(n=t,e.We--,e.qe++,8!=(15&(s.method=e.ft(e.nt++)))){s.mode=mt,e.Le="unknown compression method",s.marker=5;break}if(8+(s.method>>4)>s.zt){s.mode=mt,e.Le="invalid win size",s.marker=5;break}s.mode=1;case 1:if(0===e.We)return n;if(n=t,e.We--,e.qe++,r=255&e.ft(e.nt++),((s.method<<8)+r)%31!=0){s.mode=mt,e.Le="incorrect header check",s.marker=5;break}if(!(32&r)){s.mode=7;break}s.mode=2;case 2:if(0===e.We)return n;n=t,e.We--,e.qe++,s.St=(255&e.ft(e.nt++))<<24&4278190080,s.mode=3;case 3:if(0===e.We)return n;n=t,e.We--,e.qe++,s.St+=(255&e.ft(e.nt++))<<16&16711680,s.mode=4;case 4:if(0===e.We)return n;n=t,e.We--,e.qe++,s.St+=(255&e.ft(e.nt++))<<8&65280,s.mode=5;case 5:return 0===e.We?n:(n=t,e.We--,e.qe++,s.St+=255&e.ft(e.nt++),s.mode=6,2);case 6:return s.mode=mt,e.Le="need dictionary",s.marker=0,rt;case 7:if(n=s.kt.ut(e,n),n==st){s.mode=mt,s.marker=0;break}if(0==n&&(n=t),1!=n)return n;n=t,s.kt.reset(e,s.vt),s.mode=12;case 12:return e.We=0,1;case mt:return st;default:return rt}},e._t=(e,t,n)=>{let r=0,s=n;if(!e||!e.gt||6!=e.gt.mode)return rt;const i=e.gt;return s<1<<i.zt||(s=(1<<i.zt)-1,r=n-s),i.kt.yt(t,r,s),i.mode=7,0},e.It=e=>{let n,r,s,i,o;if(!e||!e.gt)return rt;const c=e.gt;if(c.mode!=mt&&(c.mode=mt,c.marker=0),0===(n=e.We))return it;for(r=e.nt,s=c.marker;0!==n&&4>s;)e.ft(r)==bt[s]?s++:s=0!==e.ft(r)?0:4-s,r++,n--;return e.qe+=r-e.nt,e.nt=r,e.We=n,c.marker=s,4!=s?st:(i=e.qe,o=e.Ge,t(e),e.qe=i,e.Ge=o,c.mode=7,0)},e.Pt=e=>e&&e.gt&&e.gt.kt?e.gt.kt.bt():rt}function kt(){}function vt(e){const t=new kt,n=e&&e.chunkSize?r.floor(2*e.chunkSize):131072,o=new i(n);let c=!1;t.xt(),t.$e=o,this.append=(e,r)=>{const f=[];let a,l,u=0,w=0,h=0;if(0!==e.length){t.nt=0,t.et=e,t.We=e.length;do{if(t.rt=0,t.tt=n,0!==t.We||c||(t.nt=0,c=!0),a=t.At(0),c&&a===it){if(0!==t.We)throw new s("inflating: bad input")}else if(0!==a&&1!==a)throw new s("inflating: "+t.Le);if((c||1===a)&&t.We===e.length)throw new s("inflating: bad input");t.rt&&(t.rt===n?f.push(new i(o)):f.push(o.subarray(0,t.rt))),h+=t.rt,r&&t.nt>0&&t.nt!=u&&(r(t.nt),u=t.nt)}while(t.We>0||0===t.tt);return f.length>1?(l=new i(h),f.forEach((e=>{l.set(e,w),w+=e.length}))):l=f[0]?new i(f[0]):new i,l}},this.flush=()=>{t.Ct()}}kt.prototype={xt(e){const t=this;return t.gt=new gt,e||(e=15),t.gt.xt(t,e)},At(e){const t=this;return t.gt?t.gt.At(t,e):rt},Ct(){const e=this;if(!e.gt)return rt;const t=e.gt.Ct(e);return e.gt=null,t},It(){const e=this;return e.gt?e.gt.It(e):rt},_t(e,t){const n=this;return n.gt?n.gt._t(n,e,t):rt},ft(e){return this.et[e]},je(e,t){return this.et.subarray(e,e+t)}},self.initCodec=()=>{self.Deflate=nt,self.Inflate=vt};\n',r=()=>t.useDataURI?"data:text/javascript,"+encodeURIComponent(n):URL.createObjectURL(new Blob([n],{type:"text/javascript"}));e({workerScripts:{inflate:[r],deflate:[r]}})}
 
 ;// CONCATENATED MODULE: ./node_modules/@zip.js/zip.js/lib/core/util/stream-codec-shim.js
+/* eslint-disable no-prototype-builtins */
 
 /*
  Copyright (c) 2022 Gildas Lormeau. All rights reserved.
@@ -55787,8 +55834,6 @@ function e(e,t={}){const n='const{Array:e,Object:t,Number:n,Math:r,Error:s,Uint8
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// deno-lint-ignore-file no-this-alias
-
 
 
 
@@ -55801,8 +55846,9 @@ function initShimAsyncCodec(library, options = {}, registerDataHandler) {
 }
 
 function objectHasOwn(object, propertyName) {
-	// eslint-disable-next-line no-prototype-builtins
-	return typeof Object.hasOwn === FUNCTION_TYPE ? Object.hasOwn(object, propertyName) : object.hasOwnProperty(propertyName);
+	return typeof Object.hasOwn === FUNCTION_TYPE ?
+		Object.hasOwn(object, propertyName) :
+		object.hasOwnProperty(propertyName);
 }
 
 function createCodecClass(constructor, constructorOptions, registerDataHandler) {
@@ -55885,6 +55931,7 @@ function createCodecClass(constructor, constructorOptions, registerDataHandler) 
 const ERR_HTTP_STATUS = "HTTP error ";
 const ERR_HTTP_RANGE = "HTTP Range not supported";
 const ERR_ITERATOR_COMPLETED_TOO_SOON = "Writer iterator completed too soon";
+const ERR_WRITER_NOT_INITIALIZED = "Writer not initialized";
 
 const CONTENT_TYPE_TEXT_PLAIN = "text/plain";
 const HTTP_HEADER_CONTENT_LENGTH = "Content-Length";
@@ -55922,8 +55969,10 @@ class Reader extends Stream {
 			async pull(controller) {
 				const { offset = 0, size, diskNumberStart } = readable;
 				const { chunkOffset } = this;
-				controller.enqueue(await readUint8Array(reader, offset + chunkOffset, Math.min(chunkSize, size - chunkOffset), diskNumberStart));
-				if (chunkOffset + chunkSize > size) {
+				const dataSize = size === constants_UNDEFINED_VALUE ? chunkSize : Math.min(chunkSize, size - chunkOffset);
+				const data = await readUint8Array(reader, offset + chunkOffset, dataSize, diskNumberStart);
+				controller.enqueue(data);
+				if ((chunkOffset + chunkSize > size) || (size === constants_UNDEFINED_VALUE && !data.length && dataSize)) {
 					controller.close();
 				} else {
 					this.chunkOffset += chunkSize;
@@ -55941,6 +55990,9 @@ class Writer extends Stream {
 		const writer = this;
 		const writable = new WritableStream({
 			write(chunk) {
+				if (!writer.initialized) {
+					throw new Error(ERR_WRITER_NOT_INITIALIZED);
+				}
 				return writer.writeUint8Array(chunk);
 			}
 		});
@@ -56703,22 +56755,23 @@ const PROPERTY_NAME_RAW_LAST_ACCESS_DATE = "rawLastAccessDate";
 const PROPERTY_NAME_CREATION_DATE = "creationDate";
 const PROPERTY_NAME_RAW_CREATION_DATE = "rawCreationDate";
 const PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTE = "internalFileAttribute";
+const PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES = "internalFileAttributes";
 const PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTE = "externalFileAttribute";
+const PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES = "externalFileAttributes";
 const PROPERTY_NAME_MS_DOS_COMPATIBLE = "msDosCompatible";
 const PROPERTY_NAME_ZIP64 = "zip64";
 const PROPERTY_NAME_ENCRYPTED = "encrypted";
 const PROPERTY_NAME_VERSION = "version";
 const PROPERTY_NAME_VERSION_MADE_BY = "versionMadeBy";
 const PROPERTY_NAME_ZIPCRYPTO = "zipCrypto";
+const PROPERTY_NAME_DIRECTORY = "directory";
+const PROPERTY_NAME_EXECUTABLE = "executable";
 
 const PROPERTY_NAMES = [
 	PROPERTY_NAME_FILENAME, PROPERTY_NAME_RAW_FILENAME, PROPERTY_NAME_COMPPRESSED_SIZE, PROPERTY_NAME_UNCOMPPRESSED_SIZE,
 	PROPERTY_NAME_LAST_MODIFICATION_DATE, PROPERTY_NAME_RAW_LAST_MODIFICATION_DATE, PROPERTY_NAME_COMMENT, PROPERTY_NAME_RAW_COMMENT,
 	PROPERTY_NAME_LAST_ACCESS_DATE, PROPERTY_NAME_CREATION_DATE, PROPERTY_NAME_OFFSET, PROPERTY_NAME_DISK_NUMBER_START,
-	PROPERTY_NAME_DISK_NUMBER_START, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTE, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTE,
-	PROPERTY_NAME_MS_DOS_COMPATIBLE, PROPERTY_NAME_ZIP64, PROPERTY_NAME_ENCRYPTED, PROPERTY_NAME_VERSION, PROPERTY_NAME_VERSION_MADE_BY,
-	PROPERTY_NAME_ZIPCRYPTO, "directory", "bitFlag", "signature", "filenameUTF8", "commentUTF8", "compressionMethod", "extraField", "rawExtraField",
-	"extraFieldZip64", "extraFieldUnicodePath", "extraFieldUnicodeComment", "extraFieldAES", "extraFieldNTFS", "extraFieldExtendedTimestamp"];
+	PROPERTY_NAME_DISK_NUMBER_START, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTE, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTE, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES, PROPERTY_NAME_MS_DOS_COMPATIBLE, PROPERTY_NAME_ZIP64, PROPERTY_NAME_ENCRYPTED, PROPERTY_NAME_VERSION, PROPERTY_NAME_VERSION_MADE_BY, PROPERTY_NAME_ZIPCRYPTO, PROPERTY_NAME_DIRECTORY, PROPERTY_NAME_EXECUTABLE, "bitFlag", "signature", "filenameUTF8", "commentUTF8", "compressionMethod", "extraField", "rawExtraField", "extraFieldZip64", "extraFieldUnicodePath", "extraFieldUnicodeComment", "extraFieldAES", "extraFieldNTFS", "extraFieldExtendedTimestamp"];
 
 class Entry {
 
@@ -56758,7 +56811,7 @@ class Entry {
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* global BigInt, Response, WritableStream, ReadableStream, TransformStream */
+/* global Response, WritableStream, ReadableStream, TransformStream */
 // deno-lint-ignore-file no-this-alias
 
 
@@ -56921,14 +56974,20 @@ class ZipReader {
 			const extraFieldOffset = filenameOffset + fileEntry.filenameLength;
 			const commentOffset = extraFieldOffset + fileEntry.extraFieldLength;
 			const versionMadeBy = getUint16(directoryView, offset + 4);
-			const msDosCompatible = (versionMadeBy & 0) == 0;
+			const msDosCompatible = versionMadeBy >> 8 == 0;
+			const unixCompatible = versionMadeBy >> 8 == 3;
 			const rawFilename = directoryArray.subarray(filenameOffset, extraFieldOffset);
 			const commentLength = getUint16(directoryView, offset + 32);
 			const endOffset = commentOffset + commentLength;
 			const rawComment = directoryArray.subarray(commentOffset, endOffset);
 			const filenameUTF8 = languageEncodingFlag;
 			const commentUTF8 = languageEncodingFlag;
-			const directory = msDosCompatible && ((getUint8(directoryView, offset + 38) & FILE_ATTR_MSDOS_DIR_MASK) == FILE_ATTR_MSDOS_DIR_MASK);
+			const externalFileAttributes = getUint32(directoryView, offset + 38);
+			const directory =
+				(msDosCompatible && ((getUint8(directoryView, offset + 38) & FILE_ATTR_MSDOS_DIR_MASK) == FILE_ATTR_MSDOS_DIR_MASK)) ||
+				(unixCompatible && (((externalFileAttributes >> 16) & FILE_ATTR_UNIX_DIR_MASK) == FILE_ATTR_UNIX_DIR_MASK)) ||
+				(rawFilename.length && rawFilename[rawFilename.length - 1] == DIRECTORY_SIGNATURE.charCodeAt(0));
+			const executable = (unixCompatible && (((externalFileAttributes >> 16) & FILE_ATTR_UNIX_EXECUTABLE_MASK) == FILE_ATTR_UNIX_EXECUTABLE_MASK));
 			const offsetFileEntry = getUint32(directoryView, offset + 42) + prependedDataLength;
 			Object.assign(fileEntry, {
 				versionMadeBy,
@@ -56939,13 +56998,16 @@ class ZipReader {
 				directory,
 				offset: offsetFileEntry,
 				diskNumberStart: getUint16(directoryView, offset + 34),
-				internalFileAttribute: getUint16(directoryView, offset + 36),
-				externalFileAttribute: getUint32(directoryView, offset + 38),
+				internalFileAttributes: getUint16(directoryView, offset + 36),
+				externalFileAttributes,
 				rawFilename,
 				filenameUTF8,
 				commentUTF8,
-				rawExtraField: directoryArray.subarray(extraFieldOffset, commentOffset)
+				rawExtraField: directoryArray.subarray(extraFieldOffset, commentOffset),
+				executable
 			});
+			fileEntry.internalFileAttribute = fileEntry.internalFileAttributes;
+			fileEntry.externalFileAttribute = fileEntry.externalFileAttributes;
 			const decode = getOptionValue(zipReader, options, "decodeText") || decodeText;
 			const rawFilenameEncoding = filenameUTF8 ? CHARSET_UTF8 : filenameEncoding || CHARSET_CP437;
 			const rawCommentEncoding = commentUTF8 ? CHARSET_UTF8 : commentEncoding || CHARSET_CP437;
@@ -56964,7 +57026,7 @@ class ZipReader {
 				directory: directory || filename.endsWith(DIRECTORY_SIGNATURE)
 			});
 			startOffset = Math.max(offsetFileEntry, startOffset);
-			await readCommonFooter(fileEntry, fileEntry, directoryView, offset + 6);
+			readCommonFooter(fileEntry, fileEntry, directoryView, offset + 6);
 			fileEntry.zipCrypto = fileEntry.encrypted && !fileEntry.extraFieldAES;
 			const entry = new Entry(fileEntry);
 			entry.getData = (writer, options) => fileEntry.getData(writer, entry, options);
@@ -56973,7 +57035,8 @@ class ZipReader {
 			if (onprogress) {
 				try {
 					await onprogress(indexFile + 1, filesLength, new Entry(fileEntry));
-				} catch (_error) {
+					// eslint-disable-next-line no-unused-vars
+				} catch (_) {
 					// ignored
 				}
 			}
@@ -57081,7 +57144,7 @@ class ZipEntry {
 		localDirectory.rawExtraField = localDirectory.extraFieldLength ?
 			await readUint8Array(reader, offset + 30 + localDirectory.filenameLength, localDirectory.extraFieldLength, diskNumberStart) :
 			new Uint8Array();
-		await readCommonFooter(zipEntry, localDirectory, dataView, 4, true);
+		readCommonFooter(zipEntry, localDirectory, dataView, 4, true);
 		Object.assign(fileEntry, {
 			lastAccessDate: localDirectory.lastAccessDate,
 			creationDate: localDirectory.creationDate
@@ -57172,7 +57235,7 @@ function readCommonHeader(directory, dataView, offset) {
 	});
 }
 
-async function readCommonFooter(fileEntry, directory, dataView, offset, localDirectory) {
+function readCommonFooter(fileEntry, directory, dataView, offset, localDirectory) {
 	const { rawExtraField } = directory;
 	const extraField = directory.extraField = new Map();
 	const rawExtraFieldView = getDataView(new Uint8Array(rawExtraField));
@@ -57187,7 +57250,8 @@ async function readCommonFooter(fileEntry, directory, dataView, offset, localDir
 			});
 			offsetExtraField += 4 + size;
 		}
-	} catch (_error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		// ignored
 	}
 	const compressionMethod = getUint16(dataView, offset + 4);
@@ -57203,12 +57267,12 @@ async function readCommonFooter(fileEntry, directory, dataView, offset, localDir
 	}
 	const extraFieldUnicodePath = extraField.get(EXTRAFIELD_TYPE_UNICODE_PATH);
 	if (extraFieldUnicodePath) {
-		await readExtraFieldUnicode(extraFieldUnicodePath, PROPERTY_NAME_FILENAME, PROPERTY_NAME_RAW_FILENAME, directory, fileEntry);
+		readExtraFieldUnicode(extraFieldUnicodePath, PROPERTY_NAME_FILENAME, PROPERTY_NAME_RAW_FILENAME, directory, fileEntry);
 		directory.extraFieldUnicodePath = extraFieldUnicodePath;
 	}
 	const extraFieldUnicodeComment = extraField.get(EXTRAFIELD_TYPE_UNICODE_COMMENT);
 	if (extraFieldUnicodeComment) {
-		await readExtraFieldUnicode(extraFieldUnicodeComment, PROPERTY_NAME_COMMENT, PROPERTY_NAME_RAW_COMMENT, directory, fileEntry);
+		readExtraFieldUnicode(extraFieldUnicodeComment, PROPERTY_NAME_COMMENT, PROPERTY_NAME_RAW_COMMENT, directory, fileEntry);
 		directory.extraFieldUnicodeComment = extraFieldUnicodeComment;
 	}
 	const extraFieldAES = extraField.get(EXTRAFIELD_TYPE_AES);
@@ -57250,7 +57314,7 @@ function readExtraFieldZip64(extraFieldZip64, directory) {
 	}
 }
 
-async function readExtraFieldUnicode(extraFieldUnicode, propertyName, rawPropertyName, directory, fileEntry) {
+function readExtraFieldUnicode(extraFieldUnicode, propertyName, rawPropertyName, directory, fileEntry) {
 	const extraFieldView = getDataView(extraFieldUnicode.data);
 	const crc32 = new Crc32();
 	crc32.append(fileEntry[rawPropertyName]);
@@ -57294,7 +57358,8 @@ function readExtraFieldNTFS(extraFieldNTFS, directory) {
 			}
 			offsetExtraField += 4 + attributeSize;
 		}
-	} catch (_error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		// ignored
 	}
 	try {
@@ -57315,7 +57380,8 @@ function readExtraFieldNTFS(extraFieldNTFS, directory) {
 			Object.assign(extraFieldNTFS, extraFieldData);
 			Object.assign(directory, extraFieldData);
 		}
-	} catch (_error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		// ignored
 	}
 }
@@ -57384,7 +57450,8 @@ function getDate(timeRaw) {
 	const date = (timeRaw & 0xffff0000) >> 16, time = timeRaw & 0x0000ffff;
 	try {
 		return new Date(1980 + ((date & 0xFE00) >> 9), ((date & 0x01E0) >> 5) - 1, date & 0x001F, (time & 0xF800) >> 11, (time & 0x07E0) >> 5, (time & 0x001F) * 2, 0);
-	} catch (_error) {
+		// eslint-disable-next-line no-unused-vars
+	} catch (_) {
 		// ignored
 	}
 }
@@ -57446,7 +57513,7 @@ function getDataView(array) {
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* global BigInt, TransformStream, Response */
+/* global TransformStream, Response */
 // deno-lint-ignore-file no-this-alias
 
 
@@ -57575,10 +57642,37 @@ class ZipWriterStream {
 
 async function addFile(zipWriter, name, reader, options) {
 	name = name.trim();
-	if (options.directory && (!name.endsWith(DIRECTORY_SIGNATURE))) {
-		name += DIRECTORY_SIGNATURE;
-	} else {
-		options.directory = name.endsWith(DIRECTORY_SIGNATURE);
+	const msDosCompatible = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_MS_DOS_COMPATIBLE);
+	const versionMadeBy = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_VERSION_MADE_BY, msDosCompatible ? 20 : 768);
+	const executable = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_EXECUTABLE);
+	if (versionMadeBy > MAX_16_BITS) {
+		throw new Error(ERR_INVALID_VERSION);
+	}
+	let externalFileAttributes = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTES, 0);
+	if (externalFileAttributes === 0) {
+		externalFileAttributes = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTE, 0);
+	}
+	if (!options.directory && name.endsWith(DIRECTORY_SIGNATURE)) {
+		options.directory = true;
+	}
+	const directory = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_DIRECTORY);
+	if (directory) {
+		if (!name.endsWith(DIRECTORY_SIGNATURE)) {
+			name += DIRECTORY_SIGNATURE;
+		}
+		if (externalFileAttributes === 0) {
+			if (msDosCompatible) {
+				externalFileAttributes = FILE_ATTR_MSDOS_DIR_MASK;
+			} else {
+				externalFileAttributes = FILE_ATTR_UNIX_DIR_MASK << 16;
+			}
+		}
+	} else if (!msDosCompatible && externalFileAttributes === 0) {
+		if (executable) {
+			externalFileAttributes = (FILE_ATTR_UNIX_EXECUTABLE_MASK | FILE_ATTR_UNIX_DEFAULT_MASK) << 16;
+		} else {
+			externalFileAttributes = FILE_ATTR_UNIX_DEFAULT_MASK << 16;
+		}
 	}
 	const encode = zip_writer_getOptionValue(zipWriter, options, "encodeText", encodeText);
 	let rawFilename = encode(name);
@@ -57600,16 +57694,13 @@ async function addFile(zipWriter, name, reader, options) {
 	if (version > MAX_16_BITS) {
 		throw new Error(ERR_INVALID_VERSION);
 	}
-	const versionMadeBy = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_VERSION_MADE_BY, 20);
-	if (versionMadeBy > MAX_16_BITS) {
-		throw new Error(ERR_INVALID_VERSION);
-	}
 	const lastModDate = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_LAST_MODIFICATION_DATE, new Date());
 	const lastAccessDate = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_LAST_ACCESS_DATE);
 	const creationDate = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_CREATION_DATE);
-	const msDosCompatible = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_MS_DOS_COMPATIBLE, true);
-	const internalFileAttribute = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTE, 0);
-	const externalFileAttribute = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_EXTERNAL_FILE_ATTRIBUTE, 0);
+	let internalFileAttributes = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTES, 0);
+	if (internalFileAttributes === 0) {
+		internalFileAttributes = zip_writer_getOptionValue(zipWriter, options, PROPERTY_NAME_INTERNAL_FILE_ATTRIBUTE, 0);
+	}
 	const passThrough = zip_writer_getOptionValue(zipWriter, options, "passThrough");
 	let password, rawPassword;
 	if (!passThrough) {
@@ -57725,8 +57816,10 @@ async function addFile(zipWriter, name, reader, options) {
 		dataDescriptorSignature,
 		signal,
 		msDosCompatible,
-		internalFileAttribute,
-		externalFileAttribute,
+		internalFileAttribute: internalFileAttributes,
+		internalFileAttributes,
+		externalFileAttribute: externalFileAttributes,
+		externalFileAttributes,
 		useCompressionStream,
 		passThrough,
 		encrypted: Boolean((password && getLength(password)) || (rawPassword && getLength(rawPassword))) || (passThrough && encrypted),
@@ -57847,7 +57940,8 @@ async function getFileEntry(zipWriter, name, reader, entryInfo, options) {
 			if (error) {
 				try {
 					error.corruptedEntry = true;
-				} catch (_error) {
+					// eslint-disable-next-line no-unused-vars
+				} catch (_) {
 					// ignored
 				}
 			}
@@ -57929,6 +58023,7 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
 		zipCrypto,
 		dataDescriptor,
 		directory,
+		executable,
 		versionMadeBy,
 		rawComment,
 		rawExtraField,
@@ -57940,8 +58035,8 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
 		encryptionStrength,
 		extendedTimestamp,
 		msDosCompatible,
-		internalFileAttribute,
-		externalFileAttribute,
+		internalFileAttributes,
+		externalFileAttributes,
 		useCompressionStream,
 		passThrough
 	} = options;
@@ -57950,6 +58045,7 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
 		versionMadeBy,
 		zip64,
 		directory: Boolean(directory),
+		executable: Boolean(executable),
 		filenameUTF8: true,
 		rawFilename,
 		commentUTF8: true,
@@ -57960,8 +58056,8 @@ async function createFileEntry(reader, writer, { diskNumberStart, lock }, entryI
 		rawExtraField,
 		extendedTimestamp,
 		msDosCompatible,
-		internalFileAttribute,
-		externalFileAttribute,
+		internalFileAttributes,
+		externalFileAttributes,
 		diskNumberStart
 	};
 	let {
@@ -58078,8 +58174,8 @@ function getHeaderInfo(options) {
 		extendedTimestamp,
 		encrypted
 	} = options;
-	const compressed = level !== 0 && !directory;
 	let { version, compressionMethod } = options;
+	const compressed = !directory && (level > 0 || (level === constants_UNDEFINED_VALUE && compressionMethod !== 0));
 	let rawExtraFieldAES;
 	if (encrypted && !zipCrypto) {
 		rawExtraFieldAES = new Uint8Array(getLength(EXTRAFIELD_DATA_AES) + 2);
@@ -58121,7 +58217,8 @@ function getHeaderInfo(options) {
 			setBigUint64(extraFieldNTFSView, 12, lastModTimeNTFS);
 			setBigUint64(extraFieldNTFSView, 20, getTimeNTFS(lastAccessDate) || lastModTimeNTFS);
 			setBigUint64(extraFieldNTFSView, 28, getTimeNTFS(creationDate) || lastModTimeNTFS);
-		} catch (_error) {
+			// eslint-disable-next-line no-unused-vars
+		} catch (_) {
 			rawExtraFieldNTFS = new Uint8Array();
 		}
 	} else {
@@ -58409,15 +58506,13 @@ async function closeFile(zipWriter, comment, options) {
 			rawComment,
 			versionMadeBy,
 			headerArray,
-			directory,
 			zip64,
 			zip64UncompressedSize,
 			zip64CompressedSize,
 			zip64DiskNumberStart,
 			zip64Offset,
-			msDosCompatible,
-			internalFileAttribute,
-			externalFileAttribute,
+			internalFileAttributes,
+			externalFileAttributes,
 			diskNumberStart,
 			uncompressedSize,
 			compressedSize
@@ -58436,11 +58531,9 @@ async function closeFile(zipWriter, comment, options) {
 		setUint16(directoryView, offset + 30, extraFieldLength);
 		setUint16(directoryView, offset + 32, getLength(rawComment));
 		setUint16(directoryView, offset + 34, zip64 && zip64DiskNumberStart ? MAX_16_BITS : diskNumberStart);
-		setUint16(directoryView, offset + 36, internalFileAttribute);
-		if (externalFileAttribute) {
-			zip_writer_setUint32(directoryView, offset + 38, externalFileAttribute);
-		} else if (directory && msDosCompatible) {
-			setUint8(directoryView, offset + 38, FILE_ATTR_MSDOS_DIR_MASK);
+		setUint16(directoryView, offset + 36, internalFileAttributes);
+		if (externalFileAttributes) {
+			zip_writer_setUint32(directoryView, offset + 38, externalFileAttributes);
 		}
 		zip_writer_setUint32(directoryView, offset + 42, zip64 && zip64Offset ? MAX_32_BITS : fileEntryOffset);
 		arraySet(directoryArray, rawFilename, offset + 46);
@@ -58460,7 +58553,8 @@ async function closeFile(zipWriter, comment, options) {
 		if (options.onprogress) {
 			try {
 				await options.onprogress(indexFileEntry + 1, files.size, new Entry(fileEntry));
-			} catch (_error) {
+				// eslint-disable-next-line no-unused-vars
+			} catch (_) {
 				// ignored
 			}
 		}
@@ -58992,7 +59086,8 @@ class ZipDirectoryEntry extends zip_fs_core_ZipEntry {
 					error.cause = {
 						entry
 					};
-				} catch (_error) {
+					// eslint-disable-next-line no-unused-vars
+				} catch (_) {
 					// ignored
 				}
 				throw error;
@@ -59190,7 +59285,7 @@ class FS {
 		return this.root.isPasswordProtected();
 	}
 
-	async checkPassword(password, options) {
+	checkPassword(password, options) {
 		return this.root.checkPassword(password, options);
 	}
 }
@@ -59250,7 +59345,8 @@ async function initReaders(entry, options) {
 						error.cause = {
 							entry: child
 						};
-					} catch (_error) {
+						// eslint-disable-next-line no-unused-vars
+					} catch (_) {
 						// ignored
 					}
 					throw error;
@@ -59292,11 +59388,11 @@ async function exportZip(zipWriter, entry, totalSize, options) {
 
 		async function processChild(child) {
 			const name = options.relativePath ? child.getRelativeName(selectedEntry) : child.getFullname();
-			let childOptions = child.options || {};
+			const childOptions = child.options || {};
 			let zipEntryOptions = {};
 			if (child.data instanceof Entry) {
 				const {
-					externalFileAttribute,
+					externalFileAttributes,
 					versionMadeBy,
 					comment,
 					lastModDate,
@@ -59310,7 +59406,7 @@ async function exportZip(zipWriter, entry, totalSize, options) {
 					extraFieldAES
 				} = child.data;
 				zipEntryOptions = {
-					externalFileAttribute,
+					externalFileAttributes,
 					versionMadeBy,
 					comment,
 					lastModDate,
@@ -59345,7 +59441,8 @@ async function exportZip(zipWriter, entry, totalSize, options) {
 						entryOffsets.set(name, indexProgress);
 						try {
 							await options.onprogress(Array.from(entryOffsets.values()).reduce((previousValue, currentValue) => previousValue + currentValue), totalSize);
-						} catch (_error) {
+							// eslint-disable-next-line no-unused-vars
+						} catch (_) {
 							// ignored
 						}
 					}
@@ -59356,7 +59453,7 @@ async function exportZip(zipWriter, entry, totalSize, options) {
 	}
 }
 
-async function addFileSystemHandle(zipEntry, handle, options) {
+function addFileSystemHandle(zipEntry, handle, options) {
 	return addFile(zipEntry, handle, []);
 
 	async function addFile(parentEntry, handle, addedEntries) {
@@ -59495,7 +59592,8 @@ function addChild(parent, name, params, directory) {
 let baseURL;
 try {
 	baseURL = import.meta.url;
-} catch (_error) {
+	// eslint-disable-next-line no-unused-vars
+} catch (_) {
 	// ignored
 }
 configure({ baseURL });
@@ -59731,6 +59829,9 @@ const quotelessJson = (obj) => {
     return json.replace(/"([^"]+)":/g, "$1:");
 };
 class ZodError extends Error {
+    get errors() {
+        return this.issues;
+    }
     constructor(issues) {
         super();
         this.issues = [];
@@ -59750,9 +59851,6 @@ class ZodError extends Error {
         }
         this.name = "ZodError";
         this.issues = issues;
-    }
-    get errors() {
-        return this.issues;
     }
     format(_mapper) {
         const mapper = _mapper ||
@@ -60009,9 +60107,9 @@ function addIssueToContext(ctx, issueData) {
         data: ctx.data,
         path: ctx.path,
         errorMaps: [
-            ctx.common.contextualErrorMap,
-            ctx.schemaErrorMap,
-            overrideMap,
+            ctx.common.contextualErrorMap, // contextual error map is first priority
+            ctx.schemaErrorMap, // then schema-bound map if available
+            overrideMap, // then global override map
             overrideMap === errorMap ? undefined : errorMap, // then global default map
         ].filter((x) => !!x),
     });
@@ -60187,35 +60285,6 @@ function processCreateParams(params) {
     return { errorMap: customMap, description };
 }
 class ZodType {
-    constructor(def) {
-        /** Alias of safeParseAsync */
-        this.spa = this.safeParseAsync;
-        this._def = def;
-        this.parse = this.parse.bind(this);
-        this.safeParse = this.safeParse.bind(this);
-        this.parseAsync = this.parseAsync.bind(this);
-        this.safeParseAsync = this.safeParseAsync.bind(this);
-        this.spa = this.spa.bind(this);
-        this.refine = this.refine.bind(this);
-        this.refinement = this.refinement.bind(this);
-        this.superRefine = this.superRefine.bind(this);
-        this.optional = this.optional.bind(this);
-        this.nullable = this.nullable.bind(this);
-        this.nullish = this.nullish.bind(this);
-        this.array = this.array.bind(this);
-        this.promise = this.promise.bind(this);
-        this.or = this.or.bind(this);
-        this.and = this.and.bind(this);
-        this.transform = this.transform.bind(this);
-        this.brand = this.brand.bind(this);
-        this.default = this.default.bind(this);
-        this.catch = this.catch.bind(this);
-        this.describe = this.describe.bind(this);
-        this.pipe = this.pipe.bind(this);
-        this.readonly = this.readonly.bind(this);
-        this.isNullable = this.isNullable.bind(this);
-        this.isOptional = this.isOptional.bind(this);
-    }
     get description() {
         return this._def.description;
     }
@@ -60278,6 +60347,48 @@ class ZodType {
         };
         const result = this._parseSync({ data, path: ctx.path, parent: ctx });
         return handleResult(ctx, result);
+    }
+    "~validate"(data) {
+        var _a, _b;
+        const ctx = {
+            common: {
+                issues: [],
+                async: !!this["~standard"].async,
+            },
+            path: [],
+            schemaErrorMap: this._def.errorMap,
+            parent: null,
+            data,
+            parsedType: getParsedType(data),
+        };
+        if (!this["~standard"].async) {
+            try {
+                const result = this._parseSync({ data, path: [], parent: ctx });
+                return isValid(result)
+                    ? {
+                        value: result.value,
+                    }
+                    : {
+                        issues: ctx.common.issues,
+                    };
+            }
+            catch (err) {
+                if ((_b = (_a = err === null || err === void 0 ? void 0 : err.message) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === null || _b === void 0 ? void 0 : _b.includes("encountered")) {
+                    this["~standard"].async = true;
+                }
+                ctx.common = {
+                    issues: [],
+                    async: true,
+                };
+            }
+        }
+        return this._parseAsync({ data, path: [], parent: ctx }).then((result) => isValid(result)
+            ? {
+                value: result.value,
+            }
+            : {
+                issues: ctx.common.issues,
+            });
     }
     async parseAsync(data, params) {
         const result = await this.safeParseAsync(data, params);
@@ -60365,6 +60476,40 @@ class ZodType {
     superRefine(refinement) {
         return this._refinement(refinement);
     }
+    constructor(def) {
+        /** Alias of safeParseAsync */
+        this.spa = this.safeParseAsync;
+        this._def = def;
+        this.parse = this.parse.bind(this);
+        this.safeParse = this.safeParse.bind(this);
+        this.parseAsync = this.parseAsync.bind(this);
+        this.safeParseAsync = this.safeParseAsync.bind(this);
+        this.spa = this.spa.bind(this);
+        this.refine = this.refine.bind(this);
+        this.refinement = this.refinement.bind(this);
+        this.superRefine = this.superRefine.bind(this);
+        this.optional = this.optional.bind(this);
+        this.nullable = this.nullable.bind(this);
+        this.nullish = this.nullish.bind(this);
+        this.array = this.array.bind(this);
+        this.promise = this.promise.bind(this);
+        this.or = this.or.bind(this);
+        this.and = this.and.bind(this);
+        this.transform = this.transform.bind(this);
+        this.brand = this.brand.bind(this);
+        this.default = this.default.bind(this);
+        this.catch = this.catch.bind(this);
+        this.describe = this.describe.bind(this);
+        this.pipe = this.pipe.bind(this);
+        this.readonly = this.readonly.bind(this);
+        this.isNullable = this.isNullable.bind(this);
+        this.isOptional = this.isOptional.bind(this);
+        this["~standard"] = {
+            version: 1,
+            vendor: "zod",
+            validate: (data) => this["~validate"](data),
+        };
+    }
     optional() {
         return ZodOptional.create(this, this._def);
     }
@@ -60375,7 +60520,7 @@ class ZodType {
         return this.nullable().optional();
     }
     array() {
-        return ZodArray.create(this, this._def);
+        return ZodArray.create(this);
     }
     promise() {
         return ZodPromise.create(this, this._def);
@@ -60441,11 +60586,12 @@ class ZodType {
 }
 const cuidRegex = /^c[^\s-]{8,}$/i;
 const cuid2Regex = /^[0-9a-z]+$/;
-const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const ulidRegex = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
 // const uuidRegex =
 //   /^([a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[a-f0-9]{4}-[a-f0-9]{12}|00000000-0000-0000-0000-000000000000)$/i;
 const uuidRegex = /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/i;
 const nanoidRegex = /^[a-z0-9_-]{21}$/i;
+const jwtRegex = /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/;
 const durationRegex = /^[-+]?P(?!$)(?:(?:[-+]?\d+Y)|(?:[-+]?\d+[.,]\d+Y$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:(?:[-+]?\d+W)|(?:[-+]?\d+[.,]\d+W$))?(?:(?:[-+]?\d+D)|(?:[-+]?\d+[.,]\d+D$))?(?:T(?=[\d+-])(?:(?:[-+]?\d+H)|(?:[-+]?\d+[.,]\d+H$))?(?:(?:[-+]?\d+M)|(?:[-+]?\d+[.,]\d+M$))?(?:[-+]?\d+(?:[.,]\d+)?S)?)??$/;
 // from https://stackoverflow.com/a/46181/1550155
 // old version: too slow, didn't support unicode
@@ -60467,9 +60613,15 @@ const _emojiRegex = `^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$`;
 let emojiRegex;
 // faster, simpler, safer
 const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
-const ipv6Regex = /^(([a-f0-9]{1,4}:){7}|::([a-f0-9]{1,4}:){0,6}|([a-f0-9]{1,4}:){1}:([a-f0-9]{1,4}:){0,5}|([a-f0-9]{1,4}:){2}:([a-f0-9]{1,4}:){0,4}|([a-f0-9]{1,4}:){3}:([a-f0-9]{1,4}:){0,3}|([a-f0-9]{1,4}:){4}:([a-f0-9]{1,4}:){0,2}|([a-f0-9]{1,4}:){5}:([a-f0-9]{1,4}:){0,1})([a-f0-9]{1,4}|(((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2}))\.){3}((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2})))$/;
+const ipv4CidrRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/;
+// const ipv6Regex =
+// /^(([a-f0-9]{1,4}:){7}|::([a-f0-9]{1,4}:){0,6}|([a-f0-9]{1,4}:){1}:([a-f0-9]{1,4}:){0,5}|([a-f0-9]{1,4}:){2}:([a-f0-9]{1,4}:){0,4}|([a-f0-9]{1,4}:){3}:([a-f0-9]{1,4}:){0,3}|([a-f0-9]{1,4}:){4}:([a-f0-9]{1,4}:){0,2}|([a-f0-9]{1,4}:){5}:([a-f0-9]{1,4}:){0,1})([a-f0-9]{1,4}|(((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2}))\.){3}((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2})))$/;
+const ipv6Regex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/;
+const ipv6CidrRegex = /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/;
 // https://stackoverflow.com/questions/7860392/determine-if-string-is-in-base64-using-javascript
 const base64Regex = /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/;
+// https://base64.guru/standards/base64url
+const base64urlRegex = /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/;
 // simple
 // const dateRegexSource = `\\d{4}-\\d{2}-\\d{2}`;
 // no leap year validation
@@ -60506,6 +60658,38 @@ function isValidIP(ip, version) {
         return true;
     }
     if ((version === "v6" || !version) && ipv6Regex.test(ip)) {
+        return true;
+    }
+    return false;
+}
+function isValidJWT(jwt, alg) {
+    if (!jwtRegex.test(jwt))
+        return false;
+    try {
+        const [header] = jwt.split(".");
+        // Convert base64url to base64
+        const base64 = header
+            .replace(/-/g, "+")
+            .replace(/_/g, "/")
+            .padEnd(header.length + ((4 - (header.length % 4)) % 4), "=");
+        const decoded = JSON.parse(atob(base64));
+        if (typeof decoded !== "object" || decoded === null)
+            return false;
+        if (!decoded.typ || !decoded.alg)
+            return false;
+        if (alg && decoded.alg !== alg)
+            return false;
+        return true;
+    }
+    catch (_a) {
+        return false;
+    }
+}
+function isValidCidr(ip, version) {
+    if ((version === "v4" || !version) && ipv4CidrRegex.test(ip)) {
+        return true;
+    }
+    if ((version === "v6" || !version) && ipv6CidrRegex.test(ip)) {
         return true;
     }
     return false;
@@ -60791,11 +60975,44 @@ class ZodString extends ZodType {
                     status.dirty();
                 }
             }
+            else if (check.kind === "jwt") {
+                if (!isValidJWT(input.data, check.alg)) {
+                    ctx = this._getOrReturnCtx(input, ctx);
+                    addIssueToContext(ctx, {
+                        validation: "jwt",
+                        code: ZodIssueCode.invalid_string,
+                        message: check.message,
+                    });
+                    status.dirty();
+                }
+            }
+            else if (check.kind === "cidr") {
+                if (!isValidCidr(input.data, check.version)) {
+                    ctx = this._getOrReturnCtx(input, ctx);
+                    addIssueToContext(ctx, {
+                        validation: "cidr",
+                        code: ZodIssueCode.invalid_string,
+                        message: check.message,
+                    });
+                    status.dirty();
+                }
+            }
             else if (check.kind === "base64") {
                 if (!base64Regex.test(input.data)) {
                     ctx = this._getOrReturnCtx(input, ctx);
                     addIssueToContext(ctx, {
                         validation: "base64",
+                        code: ZodIssueCode.invalid_string,
+                        message: check.message,
+                    });
+                    status.dirty();
+                }
+            }
+            else if (check.kind === "base64url") {
+                if (!base64urlRegex.test(input.data)) {
+                    ctx = this._getOrReturnCtx(input, ctx);
+                    addIssueToContext(ctx, {
+                        validation: "base64url",
                         code: ZodIssueCode.invalid_string,
                         message: check.message,
                     });
@@ -60848,8 +61065,21 @@ class ZodString extends ZodType {
     base64(message) {
         return this._addCheck({ kind: "base64", ...errorUtil.errToObj(message) });
     }
+    base64url(message) {
+        // base64url encoding is a modification of base64 that can safely be used in URLs and filenames
+        return this._addCheck({
+            kind: "base64url",
+            ...errorUtil.errToObj(message),
+        });
+    }
+    jwt(options) {
+        return this._addCheck({ kind: "jwt", ...errorUtil.errToObj(options) });
+    }
     ip(options) {
         return this._addCheck({ kind: "ip", ...errorUtil.errToObj(options) });
+    }
+    cidr(options) {
+        return this._addCheck({ kind: "cidr", ...errorUtil.errToObj(options) });
     }
     datetime(options) {
         var _a, _b;
@@ -60941,8 +61171,7 @@ class ZodString extends ZodType {
         });
     }
     /**
-     * @deprecated Use z.string().min(1) instead.
-     * @see {@link ZodString.min}
+     * Equivalent to `.min(1)`
      */
     nonempty(message) {
         return this.min(1, errorUtil.errToObj(message));
@@ -61004,8 +61233,15 @@ class ZodString extends ZodType {
     get isIP() {
         return !!this._def.checks.find((ch) => ch.kind === "ip");
     }
+    get isCIDR() {
+        return !!this._def.checks.find((ch) => ch.kind === "cidr");
+    }
     get isBase64() {
         return !!this._def.checks.find((ch) => ch.kind === "base64");
+    }
+    get isBase64url() {
+        // base64url encoding is a modification of base64 that can safely be used in URLs and filenames
+        return !!this._def.checks.find((ch) => ch.kind === "base64url");
     }
     get minLength() {
         let min = null;
@@ -61299,17 +61535,16 @@ class ZodBigInt extends ZodType {
     }
     _parse(input) {
         if (this._def.coerce) {
-            input.data = BigInt(input.data);
+            try {
+                input.data = BigInt(input.data);
+            }
+            catch (_a) {
+                return this._getInvalidInput(input);
+            }
         }
         const parsedType = this._getType(input);
         if (parsedType !== ZodParsedType.bigint) {
-            const ctx = this._getOrReturnCtx(input);
-            addIssueToContext(ctx, {
-                code: ZodIssueCode.invalid_type,
-                expected: ZodParsedType.bigint,
-                received: ctx.parsedType,
-            });
-            return INVALID;
+            return this._getInvalidInput(input);
         }
         let ctx = undefined;
         const status = new ParseStatus();
@@ -61362,6 +61597,15 @@ class ZodBigInt extends ZodType {
             }
         }
         return { status: status.value, value: input.data };
+    }
+    _getInvalidInput(input) {
+        const ctx = this._getOrReturnCtx(input);
+        addIssueToContext(ctx, {
+            code: ZodIssueCode.invalid_type,
+            expected: ZodParsedType.bigint,
+            received: ctx.parsedType,
+        });
+        return INVALID;
     }
     gte(value, message) {
         return this.setLimit("min", value, true, errorUtil.toString(message));
@@ -63569,7 +63813,23 @@ ZodReadonly.create = (type, params) => {
         ...processCreateParams(params),
     });
 };
-function custom(check, params = {}, 
+////////////////////////////////////////
+////////////////////////////////////////
+//////////                    //////////
+//////////      z.custom      //////////
+//////////                    //////////
+////////////////////////////////////////
+////////////////////////////////////////
+function cleanParams(params, data) {
+    const p = typeof params === "function"
+        ? params(data)
+        : typeof params === "string"
+            ? { message: params }
+            : params;
+    const p2 = typeof p === "string" ? { message: p } : p;
+    return p2;
+}
+function custom(check, _params = {}, 
 /**
  * @deprecated
  *
@@ -63584,16 +63844,23 @@ fatal) {
     if (check)
         return ZodAny.create().superRefine((data, ctx) => {
             var _a, _b;
-            if (!check(data)) {
-                const p = typeof params === "function"
-                    ? params(data)
-                    : typeof params === "string"
-                        ? { message: params }
-                        : params;
-                const _fatal = (_b = (_a = p.fatal) !== null && _a !== void 0 ? _a : fatal) !== null && _b !== void 0 ? _b : true;
-                const p2 = typeof p === "string" ? { message: p } : p;
-                ctx.addIssue({ code: "custom", ...p2, fatal: _fatal });
+            const r = check(data);
+            if (r instanceof Promise) {
+                return r.then((r) => {
+                    var _a, _b;
+                    if (!r) {
+                        const params = cleanParams(_params, data);
+                        const _fatal = (_b = (_a = params.fatal) !== null && _a !== void 0 ? _a : fatal) !== null && _b !== void 0 ? _b : true;
+                        ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+                    }
+                });
             }
+            if (!r) {
+                const params = cleanParams(_params, data);
+                const _fatal = (_b = (_a = params.fatal) !== null && _a !== void 0 ? _a : fatal) !== null && _b !== void 0 ? _b : true;
+                ctx.addIssue({ code: "custom", ...params, fatal: _fatal });
+            }
+            return;
         });
     return ZodAny.create();
 }
@@ -63811,7 +64078,7 @@ var ajv = __nccwpck_require__(2463);
 // EXTERNAL MODULE: ./node_modules/ajv-formats/dist/index.js
 var ajv_formats_dist = __nccwpck_require__(2815);
 ;// CONCATENATED MODULE: ./node_modules/umbrel-cli/dist/lib.js
-async function a(e){const t=function(e){const t=e.matchAll(/\$(?:([a-zA-Z0-9_\-:]+)|\{([a-zA-Z0-9_\-:]+)\})/g);return[...t].map((e=>({fullVariable:e[0],variable:e[1]??e[2],mock:""})))}(e),i=function(e){for(const t of e)t.variable.includes("_IP")?t.mock="10.10.10.10":t.variable.includes("_PORT")?t.mock=Math.floor(64512*Math.random()+1024).toString():t.variable.includes("_PASS")?t.mock="password":t.variable.includes("_USER")?t.mock="username":t.variable.includes("_DIR")?t.mock="/path/to/dir":t.variable.includes("_PATH")?t.mock="/some/path":t.variable.includes("_SERVICE")?t.mock="service":t.variable.includes("_SEED")?t.mock="seed":t.variable.includes("_CONFIG")?t.mock="/path/to/config":t.variable.includes("_MODE")?t.mock="production":t.variable.includes("_NETWORK")?t.mock="network":t.variable.includes("_DOMAIN")?t.mock="domain.com":t.variable.includes("_NAME")?t.mock="name":t.variable.includes("_VERSION")?t.mock="1.0.0":t.variable.includes("_ROOT")?t.mock="/path/to/root":t.variable.includes("_KEY")?t.mock="key":t.variable.includes("_SECRET")?t.mock="secret":t.variable.includes("_TOKEN")?t.mock="token":t.variable.includes("_HOST")?t.mock="host":t.mock="mocked";return e}(t);return function(e,t){for(const i of t)e=e.replace(i.fullVariable,i.mock);return e}(e,i)}var p={$schema:"http://json-schema.org/draft-07/schema#",$id:"compose_spec.json",type:"object",title:"Compose Specification",description:"The Compose file is a YAML file defining a multi-containers based application.",properties:{version:{type:"string",description:"declared for backward compatibility, ignored."},name:{type:"string",pattern:"^[a-z0-9][a-z0-9_-]*$",description:"define the Compose project name, until user defines one explicitly."},include:{type:"array",items:{$ref:"#/definitions/include"},description:"compose sub-projects to be included."},services:{$id:"#/properties/services",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/service"}},additionalProperties:!1},networks:{$id:"#/properties/networks",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/network"}}},volumes:{$id:"#/properties/volumes",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/volume"}},additionalProperties:!1},secrets:{$id:"#/properties/secrets",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/secret"}},additionalProperties:!1},configs:{$id:"#/properties/configs",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/config"}},additionalProperties:!1}},patternProperties:{"^x-":{}},additionalProperties:!1,definitions:{service:{$id:"#/definitions/service",type:"object",properties:{develop:{$ref:"#/definitions/development"},deploy:{$ref:"#/definitions/deployment"},annotations:{$ref:"#/definitions/list_or_dict"},attach:{type:"boolean"},build:{oneOf:[{type:"string"},{type:"object",properties:{context:{type:"string"},dockerfile:{type:"string"},dockerfile_inline:{type:"string"},entitlements:{type:"array",items:{type:"string"}},args:{$ref:"#/definitions/list_or_dict"},ssh:{$ref:"#/definitions/list_or_dict"},labels:{$ref:"#/definitions/list_or_dict"},cache_from:{type:"array",items:{type:"string"}},cache_to:{type:"array",items:{type:"string"}},no_cache:{type:"boolean"},additional_contexts:{$ref:"#/definitions/list_or_dict"},network:{type:"string"},pull:{type:"boolean"},target:{type:"string"},shm_size:{type:["integer","string"]},extra_hosts:{$ref:"#/definitions/list_or_dict"},isolation:{type:"string"},privileged:{type:"boolean"},secrets:{$ref:"#/definitions/service_config_or_secret"},tags:{type:"array",items:{type:"string"}},ulimits:{$ref:"#/definitions/ulimits"},platforms:{type:"array",items:{type:"string"}}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},blkio_config:{type:"object",properties:{device_read_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_read_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},weight:{type:"integer"},weight_device:{type:"array",items:{$ref:"#/definitions/blkio_weight"}}},additionalProperties:!1},cap_add:{type:"array",items:{type:"string"},uniqueItems:!0},cap_drop:{type:"array",items:{type:"string"},uniqueItems:!0},cgroup:{type:"string",enum:["host","private"]},cgroup_parent:{type:"string"},command:{$ref:"#/definitions/command"},configs:{$ref:"#/definitions/service_config_or_secret"},container_name:{type:"string"},cpu_count:{type:"integer",minimum:0},cpu_percent:{type:"integer",minimum:0,maximum:100},cpu_shares:{type:["number","string"]},cpu_quota:{type:["number","string"]},cpu_period:{type:["number","string"]},cpu_rt_period:{type:["number","string"]},cpu_rt_runtime:{type:["number","string"]},cpus:{type:["number","string"]},cpuset:{type:"string"},credential_spec:{type:"object",properties:{config:{type:"string"},file:{type:"string"},registry:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},depends_on:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",additionalProperties:!1,patternProperties:{"^[a-zA-Z0-9._-]+$":{type:"object",additionalProperties:!1,properties:{restart:{type:"boolean"},required:{type:"boolean",default:!0},condition:{type:"string",enum:["service_started","service_healthy","service_completed_successfully"]}},required:["condition"]}}}]},device_cgroup_rules:{$ref:"#/definitions/list_of_strings"},devices:{type:"array",items:{type:"string"},uniqueItems:!0},dns:{$ref:"#/definitions/string_or_list"},dns_opt:{type:"array",items:{type:"string"},uniqueItems:!0},dns_search:{$ref:"#/definitions/string_or_list"},domainname:{type:"string"},entrypoint:{$ref:"#/definitions/command"},env_file:{$ref:"#/definitions/env_file"},environment:{$ref:"#/definitions/list_or_dict"},expose:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^\\d{1,5}(-\\d{1,5})?(/(tcp|udp))?$"}]},uniqueItems:!0},extends:{oneOf:[{type:"string"},{type:"object",properties:{service:{type:"string"},file:{type:"string"}},required:["service"],additionalProperties:!1}]},external_links:{type:"array",items:{type:"string"},uniqueItems:!0},extra_hosts:{$ref:"#/definitions/list_or_dict"},group_add:{type:"array",items:{type:["string","number"]},uniqueItems:!0},healthcheck:{$ref:"#/definitions/healthcheck"},hostname:{type:"string"},image:{type:"string"},init:{type:"boolean"},ipc:{type:"string"},isolation:{type:"string"},labels:{$ref:"#/definitions/list_or_dict"},links:{type:"array",items:{type:"string"},uniqueItems:!0},logging:{type:"object",properties:{driver:{type:"string"},options:{type:"object",patternProperties:{"^.+$":{type:["string","number","null"]}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},mac_address:{type:"string"},mem_limit:{type:["number","string"]},mem_reservation:{type:["string","integer"]},mem_swappiness:{type:"integer"},memswap_limit:{type:["number","string"]},network_mode:{type:"string"},networks:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{oneOf:[{type:"object",properties:{aliases:{$ref:"#/definitions/list_of_strings"},ipv4_address:{type:"string",format:"ipv4"},ipv6_address:{type:"string",format:"ipv6"},link_local_ips:{$ref:"#/definitions/list_of_strings"},mac_address:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},priority:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"null"}]}},additionalProperties:!1}]},oom_kill_disable:{type:"boolean"},oom_score_adj:{type:"integer",minimum:-1e3,maximum:1e3},pid:{type:["string","null"]},pids_limit:{type:["number","string"]},platform:{type:"string"},ports:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^((\\d+((\\.\\d+)+|(-\\d+))*):?){1,3}(/(tcp|udp))?$"},{type:"object",properties:{name:{type:"string",description:"A human-readable name for the port, used to document it's usage within the service"},mode:{type:"string",pattern:"^ingress|host$",description:"host: For publishing a host port on each node, or ingress: for a port to be load balanced. Defaults to ingress."},host_ip:{type:"string",format:"ipv4",description:"The Host IP mapping, unspecified means all network interfaces (0.0.0.0)"},target:{$ref:"#/definitions/port_format",description:"The container port"},published:{anyOf:[{$ref:"#/definitions/port_format"},{$ref:"#/definitions/port_published_format"}],description:"The publicly exposed port. It is defined as a string and can be set as a range using syntax start-end. It means the actual port is assigned a remaining available port, within the set range."},protocol:{type:"string",pattern:"^tcp|udp$",description:"The port protocol (tcp or udp). Defaults to tcp"},app_protocol:{type:"string",description:"The application protocol (TCP/IP level 4 / OSI level 7) this port is used for. This is optional and can be used as a hint for Compose to offer richer behavior for protocols that it understands"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},uniqueItems:!0},privileged:{type:"boolean"},profiles:{$ref:"#/definitions/list_of_strings"},pull_policy:{type:"string",enum:["always","never","if_not_present","build","missing"]},read_only:{type:"boolean"},restart:{type:"string"},runtime:{type:"string"},scale:{type:"integer"},security_opt:{type:"array",items:{type:"string"},uniqueItems:!0},shm_size:{type:["number","string"]},secrets:{$ref:"#/definitions/service_config_or_secret"},sysctls:{$ref:"#/definitions/list_or_dict"},stdin_open:{type:"boolean"},stop_grace_period:{$ref:"#/definitions/duration_format"},stop_signal:{type:"string"},storage_opt:{type:"object"},tmpfs:{$ref:"#/definitions/string_or_list"},tty:{type:"boolean"},ulimits:{$ref:"#/definitions/ulimits"},user:{type:"string"},uts:{type:"string"},userns_mode:{type:"string"},volumes:{type:"array",items:{oneOf:[{type:"object",required:["type"],properties:{type:{type:"string"},source:{type:"string"},target:{type:"string"},read_only:{type:"boolean"},consistency:{type:"string"},bind:{type:"object",properties:{propagation:{type:"string"},create_host_path:{type:"boolean"},selinux:{type:"string",enum:["z","Z"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{type:"object",properties:{nocopy:{type:"boolean"},subpath:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},tmpfs:{type:"object",properties:{size:{oneOf:[{type:"integer",minimum:0},{type:"string"}]},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"string"}]},uniqueItems:!0},volumes_from:{type:"array",items:{type:"string"},uniqueItems:!0},working_dir:{type:"string"}},patternProperties:{"^x-":{}},additionalProperties:!1},healthcheck:{$id:"#/definitions/healthcheck",type:"object",properties:{disable:{type:"boolean"},interval:{$ref:"#/definitions/duration_format"},retries:{type:"number"},test:{oneOf:[{type:"string"},{type:"array",items:{type:"string"}}]},timeout:{$ref:"#/definitions/duration_format"},start_period:{$ref:"#/definitions/duration_format"},start_interval:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},development:{$id:"#/definitions/development",type:["object","null"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{watch:{type:"array",minItems:1,items:{type:"object",required:["path","action"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{path:{type:"string"},action:{type:"string",enum:["rebuild","sync","sync+restart"]},ignore:{type:"array",items:{type:"string"}},target:{type:"string"}}}}}},deployment:{$id:"#/definitions/deployment",type:["object","null"],properties:{mode:{type:"string"},endpoint_mode:{type:"string"},replicas:{type:"integer"},labels:{$ref:"#/definitions/list_or_dict"},rollback_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},update_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},resources:{type:"object",properties:{limits:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},pids:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}},reservations:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},generic_resources:{$ref:"#/definitions/generic_resources"},devices:{$ref:"#/definitions/devices"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},restart_policy:{type:"object",properties:{condition:{type:"string"},delay:{$ref:"#/definitions/duration_format"},max_attempts:{type:"integer"},window:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},placement:{type:"object",properties:{constraints:{type:"array",items:{type:"string"}},preferences:{type:"array",items:{type:"object",properties:{spread:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},max_replicas_per_node:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},patternProperties:{"^x-":{}},additionalProperties:!1},generic_resources:{$id:"#/definitions/generic_resources",type:"array",items:{type:"object",properties:{discrete_resource_spec:{type:"object",properties:{kind:{type:"string"},value:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},devices:{$id:"#/definitions/devices",type:"array",items:{type:"object",properties:{capabilities:{$ref:"#/definitions/list_of_strings"},count:{anyOf:[{type:"string"},{type:"integer"}]},device_ids:{$ref:"#/definitions/list_of_strings"},driver:{type:"string"},options:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},include:{$id:"#/definitions/include",oneOf:[{type:"string"},{type:"object",properties:{path:{$ref:"#/definitions/string_or_list"},env_file:{$ref:"#/definitions/string_or_list"},project_directory:{type:"string"}},additionalProperties:!1}]},network:{$id:"#/definitions/network",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},ipam:{type:"object",properties:{driver:{type:"string"},config:{type:"array",items:{type:"object",properties:{subnet:{anyOf:[{$ref:"#/definitions/ipv4_subnet_format"},{$ref:"#/definitions/ipv6_subnet_format"}]},ip_range:{type:"string"},gateway:{type:"string"},aux_addresses:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},options:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},internal:{type:"boolean"},enable_ipv6:{type:"boolean"},attachable:{type:"boolean"},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{$id:"#/definitions/volume",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},secret:{$id:"#/definitions/secret",type:"object",properties:{name:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},config:{$id:"#/definitions/config",type:"object",properties:{name:{type:"string"},content:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},command:{oneOf:[{type:"null"},{type:"string"},{type:"array",items:{type:"string"}}]},env_file:{oneOf:[{type:"string"},{type:"array",items:{oneOf:[{type:"string"},{type:"object",additionalProperties:!1,properties:{path:{type:"string"},required:{type:"boolean",default:!0}},required:["path"]}]}}]},string_or_list:{oneOf:[{type:"string"},{$ref:"#/definitions/list_of_strings"}]},list_of_strings:{type:"array",items:{type:"string"},uniqueItems:!0},duration_format:{type:"string",pattern:"^([0-9]+h)?([0-9]+m)?([0-9]+s)?([0-9]+ms)?([0-9]+us)?([0-9]+ns)?$"},expose_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?(/tcp|udp)?$"},port_published_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?$"},port_format:{type:"integer",minimum:0,maximum:65535},ipv6_subnet_format:{type:"string",pattern:"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))/(?:\\d|[12]\\d|3[01])"},ipv4_subnet_format:{type:"string",pattern:"((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}/(?:\\d|[12]\\d|3[01])"},list_or_dict:{oneOf:[{type:"object",patternProperties:{".+":{type:["string","number","boolean","null"]}},additionalProperties:!1},{type:"array",items:{type:"string"},uniqueItems:!0}]},blkio_limit:{type:"object",properties:{path:{type:"string"},rate:{type:["integer","string"]}},additionalProperties:!1},blkio_weight:{type:"object",properties:{path:{type:"string"},weight:{type:"integer"}},additionalProperties:!1},service_config_or_secret:{type:"array",items:{oneOf:[{type:"string"},{type:"object",properties:{source:{type:"string"},target:{type:"string"},uid:{type:"string"},gid:{type:"string"},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]}},ulimits:{type:"object",patternProperties:{"^[a-z]+$":{oneOf:[{type:"integer"},{type:"object",properties:{hard:{type:"integer"},soft:{type:"integer"}},required:["soft","hard"],additionalProperties:!1,patternProperties:{"^x-":{}}}]}}},constraints:{service:{$id:"#/definitions/constraints/service",anyOf:[{required:["build"]},{required:["image"]}],properties:{build:{required:["context"]}}}}}};async function l(){return z.object({manifestVersion:z.number().refine((e=>1===e||1.1===e||1.2===e),{message:"The manifest version can either be '1' or '1.1'"}),id:z.string().refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the app repository"}),disabled:z.boolean().optional(),name:z.string().min(1).max(50),tagline:z.string().min(1).max(100).refine((async e=>!(e.endsWith(".")&&2===e.split(".").length)),{message:"Taglines should not end with a period"}),icon:z.string().optional(),category:z.enum(["files","bitcoin","media","networking","social","automation","finance","ai","developer"]),version:z.string().min(1),port:z.number().int().min(0).max(65535),description:z.string().min(1).max(5e3),developer:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),website:z.string().url(),submitter:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),submission:z.string().url(),repo:z.union([z.string().url(),z.literal("")]).optional(),support:z.string().url(),gallery:z.string().array(),releaseNotes:z.string().min(0).max(5e3).optional(),dependencies:z.string().array().optional(),permissions:z.enum(["STORAGE_DOWNLOADS"]).array().optional(),path:z.string().refine((e=>function(e){try{return new URL(e),!0}catch{return!1}}(`https://example.com${e}`))).optional(),defaultUsername:z.string().optional().or(z.literal("")),defaultPassword:z.string().optional().or(z.literal("")),deterministicPassword:z.boolean().optional(),optimizedForUmbrelHome:z.boolean().optional(),torOnly:z.boolean().optional(),installSize:z.number().int().min(0).optional(),widgets:z.any().array().optional(),defaultShell:z.string().optional()}).refine((e=>!e.dependencies?.includes(e.id)),{message:"Dependencies can't include its own app id"})}function c(e,t){const s=new dist.LineCounter,n=new dist.Parser(s.addNewLine),[o]=n.parse(e);return function e(t,i){switch(t.type){case"document":return e(t.value,i);case"block-map":for(const r of t.items)if(r.key&&"source"in r.key&&r.key.source===i[0]){if(1===i.length){const e=s.linePos(r.key.offset);if(r.value&&"end"in r.value&&r.value.end&&r.value.end[0]){const t=s.linePos(r.value.offset),i=s.linePos(r.value.end[0].offset);return e.line===i.line?{line:{start:e.line,end:e.line},column:{start:t.col,end:i.col}}:{line:{start:e.line,end:i.line}}}return{line:{start:e.line,end:e.line}}}return r.value?(i.splice(0,1),e(r.value,i)):void 0}break;case"block-seq":{const r=parseInt(String(i[0]));if(isNaN(r))return;if(r<0||r>=t.items.length)return;const n=t.items[r];if(!n||!n.value)return;if(1===i.length){const e=s.linePos(n.value.offset);if("end"in n.value&&n.value.end&&n.value.end[0]){const t=s.linePos(n.value.end[0].offset);return e.line===t.line?{line:{start:e.line,end:e.line},column:{start:e.col,end:t.col}}:{line:{start:e.line,end:t.line}}}return{line:{start:e.line,end:e.line}}}if(n.value)return i.splice(0,1),e(n.value,i);break}}}(o,t)}const d=new Map;async function m(e){const t=d.get(e.APIHost);if(t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);const i=await fetch(`https://${e.APIHost}/v2/`,{signal:t.signal});if(!("registry/2.0"===i.headers.get("Docker-Distribution-Api-Version")))throw new Error(`"${e.APIHost}" is not a valid CNCF distribution registry`);let r;if(401===i.status){const e=i.headers.get("Www-Authenticate");if(!e)throw new Error(`Missing auth header for "${i.url}"`);r=function(e){if(!e.startsWith("Bearer"))throw new Error(`Only Bearer token authorization is supported: ${e}`);const t=e.match(/realm="(.*?)"/)?.[1];if(!t)throw new Error(`Failed to get realm from auth header: ${e}`);const i=e.match(/service="(.*?)"/)?.[1];if(!i)throw new Error(`Failed to get service from auth header: ${e}`);const r=e.match(/scope="(.*?)"/)?.[1];return{realm:t,service:i,scope:r}}(e)}const s={host:e.APIHost,auth:r};return d.set(e.APIHost,s),s}catch(t){throw d.set(e.APIHost,!1),t}}async function y(e,t,i){const r=await async function(e){const t=await m(e);if(!t.auth)return;const i=new URL(t.auth.realm);i.searchParams.set("service",t.auth.service),i.searchParams.set("scope",`repository:${e.APIPath}:pull`);const r=await fetch(i);return(await r.json()).token}(e),s=new Headers(i?.headers);return r&&s.append("Authorization",`Bearer ${r}`),fetch(t,{...i,headers:s})}async function f(e){const t=await async function(e){const t=new Headers;t.append("Accept","application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json");const i=await y(e,`https://${e.APIHost}/v2/${e.APIPath}/manifests/${e.digest?encodeURIComponent(e.digest):e.tag}`,{headers:t});if(!i.ok)throw new Error(`HTTP ${i.status} for ${e.toString()}: ${await i.text()}`);const r=await i.json(),s=i.headers.get("Content-Type");switch(s){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return r;default:throw new Error(`Unsupported content type: ${s}`)}}(e);switch(t.mediaType){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":return[];case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return t.manifests.map((e=>({os:e.platform.os,architecture:e.platform.architecture,variant:e.platform.variant})))}}class u{#e;#t;#i;#r;constructor({host:e,path:t,tag:i,digest:r}){this.#e=e,this.#t=t,this.#i=i,this.#r=r}static#s(e){return"docker.io"===e?"registry.hub.docker.com":e}static async fromString(e){const t=/^(?<path>[a-z0-9_.:-]+?(?:\/[a-z0-9_.-]+)*)(?::(?<tag>[a-zA-Z0-9_.-]+))?(?!.*(?<!.*@.*):)(?:@(?<digest>[a-z0-9]+:[0-9a-f]{64}))?$/m.exec(e);if(!t||!t.groups)throw new Error(`Invalid image format: ${e}`);let i=t.groups.path;const{tag:r,digest:s}=t.groups,n=i.split("/");if(1===n.length)return new u({host:void 0,path:i,tag:r,digest:s});let o;return await u.isRegistry(n[0])&&(o=n[0],i=n.slice(1).join("/")),new u({host:o,path:i,tag:r,digest:s})}static#n=new Map;static async isRegistry(e){e=u.#s(e);const t=u.#n.get(e);if("boolean"==typeof t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);return"registry/2.0"===(await fetch(`https://${e}/v2/`,{signal:t.signal})).headers.get("Docker-Distribution-Api-Version")}catch{return u.#n.set(e,!1),!1}}get host(){return this.#e||"docker.io"}get APIHost(){return u.#s(this.host)}get path(){return this.#t}get APIPath(){const e=this.path;return e.includes("/")?e:`library/${this.#t}`}get tag(){return this.#i||"latest"}get digest(){return this.#r}toString(){let e=this.#t;return this.#e&&(e=`${this.#e}/${e}`),this.#i&&(e=`${e}:${this.#i}`),this.#r&&(e=`${e}@${this.#r}`),e}toFullString(){return`${this.host}/${this.path}:${this.tag}${this.digest?`@${this.digest}`:""}`}}async function g(e){let i;try{i=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app-store.yml is not a valid YAML file",message:String(e),file:"umbrel-app-store.yml"}]}const r=await async function(){return z.object({id:z.string().min(1).max(50).refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the official Umbrel App Store."}).refine((e=>/^[a-z]+(?:-[a-z]+)*$/.test(e)),{message:"The id of the app should contain only alphabets ('a' to 'z') and dashes ('-')."}),name:z.string().min(1).max(50)})}(),n=await r.safeParseAsync(i);return n.success?[]:n.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:"umbrel-app-store.yml"})))}async function h(e,i,r={}){let s;try{s=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app.yml is not a valid YAML file",message:String(e),file:`${i}/umbrel-app.yml`}]}const n=await l(),o=await n.safeParseAsync(s);let a=[];if(o.success||(a=o.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:`${i}/umbrel-app.yml`})))),r.isNewAppSubmission&&r.pullRequestUrl&&s.submission!==r.pullRequestUrl&&a.push({id:"invalid_submission_field",severity:"error",propertiesPath:"submission",...c(e,["submission"]),title:`Invalid submission field "${s.submission}"`,message:`The submission field must be set to the URL of this pull request: ${r.pullRequestUrl}`,file:`${i}/umbrel-app.yml`}),r.isNewAppSubmission&&"string"==typeof s.releaseNotes&&s.releaseNotes.length>0&&a.push({id:"filled_out_release_notes_on_first_submission",severity:"error",propertiesPath:"releaseNotes",...c(e,["releaseNotes"]),title:'"releaseNotes" needs to be empty for new app submissions',message:'The "releaseNotes" field must be empty for new app submissions as it is being displayed to the user only in case of an update.',file:`${i}/umbrel-app.yml`}),r.isNewAppSubmission){const t=s.icon,r=s.gallery;(t&&String(t).length>0||Array.isArray(r)&&r.length>0)&&a.push({id:"filled_out_icon_or_gallery_on_first_submission",severity:"warning",propertiesPath:t?"icon":"gallery",...c(e,t?["icon"]:["gallery"]),title:'"icon" and "gallery" needs to be empty for new app submissions',message:'The "icon" and "gallery" fields must be empty for new app submissions as it is being created by the Umbrel team.',file:`${i}/umbrel-app.yml`})}if(r.allUmbrelAppYmlContents){const n=new Map;for(const e of r.allUmbrelAppYmlContents){let r;try{r=dist.parse(e)}catch{continue}"object"==typeof r&&null!==r&&("port"in r&&"number"==typeof r.port&&"name"in r&&"string"==typeof r.name&&"id"in r&&"string"==typeof r.id&&r.id!==i&&n.set(r.port,`${r.name} (${r.id})`))}if(n.has(s.port)){const t=n.get(s.port);a.push({id:"duplicate_ui_port",severity:"error",propertiesPath:"port",...c(e,["port"]),title:`Port ${s.port} is already used by ${t}`,message:"Each app must use a unique port",file:`${i}/umbrel-app.yml`})}}return a}async function _(i,r,s,l={}){const d=await a(i);let m,y;try{m=dist.parse(i,{merge:!0}),y=dist.parse(d,{merge:!0})}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"docker-compose.yml is not a valid YAML file",message:String(e),file:`${r}/docker-compose.yml`}]}const g=new ajv({allowUnionTypes:!0});ajv_formats_dist(g);const h=g.compile(p);if(!h(y))return(h.errors??[]).map((t=>({id:t.keyword,propertiesPath:external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean).join("."),...c(i,external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean)),severity:"error",title:t.instancePath,message:t.message??"Unknown error",file:`${r}/docker-compose.yml`})));const _=[],v=Object.keys(m.services??{}),b=Object.keys(y.services??{});for(const e of b){const t=y.services?.[e].image;if(!t)continue;const s=t.match(/^(.+):(.+)@(.+)$/);if(s){const[,t]=s.slice(1);"latest"===t&&_.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"warning",title:`Invalid image tag "${t}"`,message:'Images should not use the "latest" tag',file:`${r}/docker-compose.yml`})}else _.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${t}"`,message:'Images should be named like "<name>:<version-tag>@<sha256>"',file:`${r}/docker-compose.yml`})}for(const e of b){const t=y.services?.[e].environment,s=y.services?.[e].labels,n=y.services?.[e].extra_hosts,o=[];t&&!Array.isArray(t)&&o.push({label:"environment",entries:Object.entries(t)}),s&&!Array.isArray(s)&&o.push({label:"labels",entries:Object.entries(s)}),n&&!Array.isArray(n)&&o.push({label:"extra_hosts",entries:Object.entries(n)});for(const t of o)for(const[s,n]of t.entries)"boolean"==typeof n&&_.push({id:"invalid_yaml_boolean_value",propertiesPath:`services.${e}.${t.label}.${s}`,...c(i,["services",e,t.label,s]),severity:"error",title:`Invalid YAML boolean value for key "${s}"`,message:`Boolean values should be strings like "${n}" instead of ${n}`,file:`${r}/docker-compose.yml`})}for(const e of v){const t=m.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s?s.match(/\$\{?APP_DATA_DIR\}?\/?:/)&&_.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "\${APP_DATA_DIR}/data${s.split(":")[1]??""}" instead.`,file:`${r}/docker-compose.yml`}):"object"==typeof s&&"source"in s&&"target"in s&&s.source.match(/\$\{?APP_DATA_DIR\}?\/?$/)&&_.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s.source}:${s.target}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "source: \${APP_DATA_DIR}/data" and "target: ${s.target??"/some/dir"}" instead.`,file:`${r}/docker-compose.yml`})}for(const e of v){const t=m.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const n of t)if("string"==typeof n){if(n.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.match(/\$\{?APP_DATA_DIR\}?\/?(.*?):/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||_.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}else if("object"==typeof n&&"source"in n&&"target"in n&&n.source.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.source.match(/\$\{?APP_DATA_DIR\}?\/?(.*?)$/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||_.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n.source}:${n.target}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}for(const e of v){const t=m.services?.[e].ports;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s||"number"==typeof s?_.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s}"`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`}):"object"==typeof s&&"target"in s&&_.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s.target}${s.published?`:${s.published}`:""}`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`})}if(l.checkImageArchitectures)for(const e of v){const t=m.services?.[e].image;if(!t)continue;let s;try{s=await u.fromString(t)}catch(e){_.push({id:"invalid_docker_image_name",severity:"error",title:"Invalid image name",message:String(e),file:`${r}/docker-compose.yml`});continue}try{const t=await f(s);t.find((e=>"linux"===e.os&&"arm64"===e.architecture))&&t.find((e=>"linux"===e.os&&"amd64"===e.architecture))||_.push({id:"invalid_image_architectures",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image architectures for image "${s}"`,message:`The image "${s}" does not support the architectures "arm64" and "amd64". Please make sure that the image supports both architectures.`,file:`${r}/docker-compose.yml`})}catch(t){_.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${s}"`,message:String(t),file:`${r}/docker-compose.yml`})}}for(const e of b){if("app_proxy"===e)continue;const t=y.services?.[e].user,s=y.services?.[e].environment;let n=!1;if(s)if(Array.isArray(s))(s.includes("UID=1000")||s.includes("PUID=1000"))&&(n=!0);else for(const[e,t]of Object.entries(s))"UID"!==e&&"PUID"!==e||"1000"===String(t)&&(n=!0);"root"===t?_.push({id:"invalid_container_user",propertiesPath:`services.${e}.user`,...c(i,["services",e,"user"]),severity:"info",title:`Using unsafe user "${t}" in service "${e}"`,message:`The user "${t}" can lead to security vulnerabilities. If possible please use a non-root user instead.`,file:`${r}/docker-compose.yml`}):t||n||_.push({id:"invalid_container_user",severity:"info",title:`Potentially using unsafe user in service "${e}"`,message:'The default container user "root" can lead to security vulnerabilities. If you are using the root user, please try to specify a different user (e.g. "1000:1000") in the compose file or try to set the UID/PUID and GID/PGID environment variables to 1000.',file:`${r}/docker-compose.yml`})}for(const e of b){const t=y.services?.[e].network_mode;"host"===t&&_.push({id:"container_network_mode_host",propertiesPath:`services.${e}.network_mode`,...c(i,["services",e,"network_mode"]),severity:"info",title:`Service "${e}" uses host network mode`,message:"The host network mode can lead to security vulnerabilities. If possible please use the default bridge network mode and expose the necessary ports.",file:`${r}/docker-compose.yml`})}const $=new Set;for(const e of v){if("app_proxy"===e)continue;const t=m.services?.[e]?.hostname;t&&$.add(t);const i=m.services?.[e]?.container_name;i&&$.add(i)}for(const e of v)if("app_proxy"===e){const t=m.services?.[e].environment,s=new Map;if(Array.isArray(t))for(const e of t){const[t,i]=e.split("=");s.set(t,i)}else if("object"==typeof t)for(const[e,i]of Object.entries(t))s.set(e,String(i));if(s.has("APP_HOST")){const t=String(s.get("APP_HOST"));if(!t.startsWith("$")&&!$.has(t)){const[s,n,o]=t.split("_");s===r.toLowerCase()&&b.includes(n)&&"1"===o||_.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"warning",title:"Invalid APP_HOST environment variable",message:'The APP_HOST environment variable must be set to the hostname of the app_proxy container (e.g. "<app-id>_<web-container-name>_1").',file:`${r}/docker-compose.yml`})}}else _.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"error",title:"Missing APP_HOST environment variable",message:'The app_proxy container needs to have the APP_HOST environment variable set to the hostname of the app_proxy container (e.g. "<app-id>_<web-container-name>_1").',file:`${r}/docker-compose.yml`});s.has("APP_PORT")?isNaN(Number(s.get("APP_PORT")))&&(s.get("APP_PORT")?.startsWith("$")||_.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"warning",title:"Invalid APP_PORT environment variable",message:"The APP_PORT environment variable must be set to the port the ui of the app inside the container is listening on.",file:`${r}/docker-compose.yml`})):_.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"error",title:"Missing APP_PORT environment variable",message:"The app_proxy container needs to have the APP_PORT environment variable set to the port the ui of the app inside the container is listening on.",file:`${r}/docker-compose.yml`})}for(const e of b){if("app_proxy"===e)continue;const t=y.services?.[e].restart;t&&"on-failure"!==t&&_.push({id:"invalid_restart_policy",propertiesPath:`services.${e}.restart`,...c(i,["services",e,"restart"]),severity:"warning",title:"Invalid restart policy",message:`The restart policy of the container "${e}" should be set to "on-failure".`,file:`${r}/docker-compose.yml`})}return _}function v(e){const t=e.filter((e=>"directory"===e.type)).filter((t=>!e.some((e=>e.path.length>t.path.length&&e.path.startsWith(t.path))))),i=[];for(const e of t)i.push({id:"empty_app_data_directory",severity:"error",title:`Empty directory "${e.path}"`,message:`Please add a ".gitkeep" file to the directory "${e.path}". This is necessary to ensure the correct permissions of the directory after cloning!`,file:e.path});return i}z.setErrorMap(((e,t)=>e.code===z.ZodIssueCode.invalid_type&&"undefined"===e.received?{message:`The "${e.path.join(".")}" key is required`}:{message:t.defaultError}));
+async function a(e){const t=function(e){const t=e.matchAll(/\$(?:([a-zA-Z0-9_\-:]+)|\{([a-zA-Z0-9_\-:]+)\})/g);return[...t].map((e=>({fullVariable:e[0],variable:e[1]??e[2],mock:""})))}(e),i=function(e){for(const t of e)t.variable.includes("_IP")?t.mock="10.10.10.10":t.variable.includes("_PORT")?t.mock=Math.floor(64512*Math.random()+1024).toString():t.variable.includes("_PASS")?t.mock="password":t.variable.includes("_USER")?t.mock="username":t.variable.includes("_DIR")?t.mock="/path/to/dir":t.variable.includes("_PATH")?t.mock="/some/path":t.variable.includes("_SERVICE")?t.mock="service":t.variable.includes("_SEED")?t.mock="seed":t.variable.includes("_CONFIG")?t.mock="/path/to/config":t.variable.includes("_MODE")?t.mock="production":t.variable.includes("_NETWORK")?t.mock="network":t.variable.includes("_DOMAIN")?t.mock="domain.com":t.variable.includes("_NAME")?t.mock="name":t.variable.includes("_VERSION")?t.mock="1.0.0":t.variable.includes("_ROOT")?t.mock="/path/to/root":t.variable.includes("_KEY")?t.mock="key":t.variable.includes("_SECRET")?t.mock="secret":t.variable.includes("_TOKEN")?t.mock="token":t.variable.includes("_HOST")?t.mock="host":t.mock="mocked";return e}(t);return function(e,t){for(const i of t)e=e.replace(i.fullVariable,i.mock);return e}(e,i)}var p={$schema:"http://json-schema.org/draft-07/schema#",$id:"compose_spec.json",type:"object",title:"Compose Specification",description:"The Compose file is a YAML file defining a multi-containers based application.",properties:{version:{type:"string",description:"declared for backward compatibility, ignored."},name:{type:"string",pattern:"^[a-z0-9][a-z0-9_-]*$",description:"define the Compose project name, until user defines one explicitly."},include:{type:"array",items:{$ref:"#/definitions/include"},description:"compose sub-projects to be included."},services:{$id:"#/properties/services",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/service"}},additionalProperties:!1},networks:{$id:"#/properties/networks",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/network"}}},volumes:{$id:"#/properties/volumes",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/volume"}},additionalProperties:!1},secrets:{$id:"#/properties/secrets",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/secret"}},additionalProperties:!1},configs:{$id:"#/properties/configs",type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{$ref:"#/definitions/config"}},additionalProperties:!1}},patternProperties:{"^x-":{}},additionalProperties:!1,definitions:{service:{$id:"#/definitions/service",type:"object",properties:{develop:{$ref:"#/definitions/development"},deploy:{$ref:"#/definitions/deployment"},annotations:{$ref:"#/definitions/list_or_dict"},attach:{type:"boolean"},build:{oneOf:[{type:"string"},{type:"object",properties:{context:{type:"string"},dockerfile:{type:"string"},dockerfile_inline:{type:"string"},entitlements:{type:"array",items:{type:"string"}},args:{$ref:"#/definitions/list_or_dict"},ssh:{$ref:"#/definitions/list_or_dict"},labels:{$ref:"#/definitions/list_or_dict"},cache_from:{type:"array",items:{type:"string"}},cache_to:{type:"array",items:{type:"string"}},no_cache:{type:"boolean"},additional_contexts:{$ref:"#/definitions/list_or_dict"},network:{type:"string"},pull:{type:"boolean"},target:{type:"string"},shm_size:{type:["integer","string"]},extra_hosts:{$ref:"#/definitions/list_or_dict"},isolation:{type:"string"},privileged:{type:"boolean"},secrets:{$ref:"#/definitions/service_config_or_secret"},tags:{type:"array",items:{type:"string"}},ulimits:{$ref:"#/definitions/ulimits"},platforms:{type:"array",items:{type:"string"}}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},blkio_config:{type:"object",properties:{device_read_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_read_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_bps:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},device_write_iops:{type:"array",items:{$ref:"#/definitions/blkio_limit"}},weight:{type:"integer"},weight_device:{type:"array",items:{$ref:"#/definitions/blkio_weight"}}},additionalProperties:!1},cap_add:{type:"array",items:{type:"string"},uniqueItems:!0},cap_drop:{type:"array",items:{type:"string"},uniqueItems:!0},cgroup:{type:"string",enum:["host","private"]},cgroup_parent:{type:"string"},command:{$ref:"#/definitions/command"},configs:{$ref:"#/definitions/service_config_or_secret"},container_name:{type:"string"},cpu_count:{type:"integer",minimum:0},cpu_percent:{type:"integer",minimum:0,maximum:100},cpu_shares:{type:["number","string"]},cpu_quota:{type:["number","string"]},cpu_period:{type:["number","string"]},cpu_rt_period:{type:["number","string"]},cpu_rt_runtime:{type:["number","string"]},cpus:{type:["number","string"]},cpuset:{type:"string"},credential_spec:{type:"object",properties:{config:{type:"string"},file:{type:"string"},registry:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},depends_on:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",additionalProperties:!1,patternProperties:{"^[a-zA-Z0-9._-]+$":{type:"object",additionalProperties:!1,properties:{restart:{type:"boolean"},required:{type:"boolean",default:!0},condition:{type:"string",enum:["service_started","service_healthy","service_completed_successfully"]}},required:["condition"]}}}]},device_cgroup_rules:{$ref:"#/definitions/list_of_strings"},devices:{type:"array",items:{type:"string"},uniqueItems:!0},dns:{$ref:"#/definitions/string_or_list"},dns_opt:{type:"array",items:{type:"string"},uniqueItems:!0},dns_search:{$ref:"#/definitions/string_or_list"},domainname:{type:"string"},entrypoint:{$ref:"#/definitions/command"},env_file:{$ref:"#/definitions/env_file"},environment:{$ref:"#/definitions/list_or_dict"},expose:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^\\d{1,5}(-\\d{1,5})?(/(tcp|udp))?$"}]},uniqueItems:!0},extends:{oneOf:[{type:"string"},{type:"object",properties:{service:{type:"string"},file:{type:"string"}},required:["service"],additionalProperties:!1}]},external_links:{type:"array",items:{type:"string"},uniqueItems:!0},extra_hosts:{$ref:"#/definitions/list_or_dict"},group_add:{type:"array",items:{type:["string","number"]},uniqueItems:!0},healthcheck:{$ref:"#/definitions/healthcheck"},hostname:{type:"string"},image:{type:"string"},init:{type:"boolean"},ipc:{type:"string"},isolation:{type:"string"},labels:{$ref:"#/definitions/list_or_dict"},links:{type:"array",items:{type:"string"},uniqueItems:!0},logging:{type:"object",properties:{driver:{type:"string"},options:{type:"object",patternProperties:{"^.+$":{type:["string","number","null"]}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},mac_address:{type:"string"},mem_limit:{type:["number","string"]},mem_reservation:{type:["string","integer"]},mem_swappiness:{type:"integer"},memswap_limit:{type:["number","string"]},network_mode:{type:"string"},networks:{oneOf:[{$ref:"#/definitions/list_of_strings"},{type:"object",patternProperties:{"^[a-zA-Z0-9._-]+$":{oneOf:[{type:"object",properties:{aliases:{$ref:"#/definitions/list_of_strings"},ipv4_address:{type:"string",format:"ipv4"},ipv6_address:{type:"string",format:"ipv6"},link_local_ips:{$ref:"#/definitions/list_of_strings"},mac_address:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},priority:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"null"}]}},additionalProperties:!1}]},oom_kill_disable:{type:"boolean"},oom_score_adj:{type:"integer",minimum:-1e3,maximum:1e3},pid:{type:["string","null"]},pids_limit:{type:["number","string"]},platform:{type:"string"},ports:{type:"array",items:{oneOf:[{type:"number"},{type:"string",pattern:"^((\\d+((\\.\\d+)+|(-\\d+))*):?){1,3}(/(tcp|udp))?$"},{type:"object",properties:{name:{type:"string",description:"A human-readable name for the port, used to document it's usage within the service"},mode:{type:"string",pattern:"^ingress|host$",description:"host: For publishing a host port on each node, or ingress: for a port to be load balanced. Defaults to ingress."},host_ip:{type:"string",format:"ipv4",description:"The Host IP mapping, unspecified means all network interfaces (0.0.0.0)"},target:{$ref:"#/definitions/port_format",description:"The container port"},published:{anyOf:[{$ref:"#/definitions/port_format"},{$ref:"#/definitions/port_published_format"}],description:"The publicly exposed port. It is defined as a string and can be set as a range using syntax start-end. It means the actual port is assigned a remaining available port, within the set range."},protocol:{type:"string",pattern:"^tcp|udp$",description:"The port protocol (tcp or udp). Defaults to tcp"},app_protocol:{type:"string",description:"The application protocol (TCP/IP level 4 / OSI level 7) this port is used for. This is optional and can be used as a hint for Compose to offer richer behavior for protocols that it understands"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]},uniqueItems:!0},privileged:{type:"boolean"},profiles:{$ref:"#/definitions/list_of_strings"},pull_policy:{type:"string",enum:["always","never","if_not_present","build","missing"]},read_only:{type:"boolean"},restart:{type:"string"},runtime:{type:"string"},scale:{type:"integer"},security_opt:{type:"array",items:{type:"string"},uniqueItems:!0},shm_size:{type:["number","string"]},secrets:{$ref:"#/definitions/service_config_or_secret"},sysctls:{$ref:"#/definitions/list_or_dict"},stdin_open:{type:"boolean"},stop_grace_period:{$ref:"#/definitions/duration_format"},stop_signal:{type:"string"},storage_opt:{type:"object"},tmpfs:{$ref:"#/definitions/string_or_list"},tty:{type:"boolean"},ulimits:{$ref:"#/definitions/ulimits"},user:{type:"string"},uts:{type:"string"},userns_mode:{type:"string"},volumes:{type:"array",items:{oneOf:[{type:"object",required:["type"],properties:{type:{type:"string"},source:{type:"string"},target:{type:"string"},read_only:{type:"boolean"},consistency:{type:"string"},bind:{type:"object",properties:{propagation:{type:"string"},create_host_path:{type:"boolean"},selinux:{type:"string",enum:["z","Z"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{type:"object",properties:{nocopy:{type:"boolean"},subpath:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},tmpfs:{type:"object",properties:{size:{oneOf:[{type:"integer",minimum:0},{type:"string"}]},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},{type:"string"}]},uniqueItems:!0},volumes_from:{type:"array",items:{type:"string"},uniqueItems:!0},working_dir:{type:"string"}},patternProperties:{"^x-":{}},additionalProperties:!1},healthcheck:{$id:"#/definitions/healthcheck",type:"object",properties:{disable:{type:"boolean"},interval:{$ref:"#/definitions/duration_format"},retries:{type:"number"},test:{oneOf:[{type:"string"},{type:"array",items:{type:"string"}}]},timeout:{$ref:"#/definitions/duration_format"},start_period:{$ref:"#/definitions/duration_format"},start_interval:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},development:{$id:"#/definitions/development",type:["object","null"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{watch:{type:"array",minItems:1,items:{type:"object",required:["path","action"],additionalProperties:!1,patternProperties:{"^x-":{}},properties:{path:{type:"string"},action:{type:"string",enum:["rebuild","sync","sync+restart"]},ignore:{type:"array",items:{type:"string"}},target:{type:"string"}}}}}},deployment:{$id:"#/definitions/deployment",type:["object","null"],properties:{mode:{type:"string"},endpoint_mode:{type:"string"},replicas:{type:"integer"},labels:{$ref:"#/definitions/list_or_dict"},rollback_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},update_config:{type:"object",properties:{parallelism:{type:"integer"},delay:{$ref:"#/definitions/duration_format"},failure_action:{type:"string"},monitor:{$ref:"#/definitions/duration_format"},max_failure_ratio:{type:"number"},order:{type:"string",enum:["start-first","stop-first"]}},additionalProperties:!1,patternProperties:{"^x-":{}}},resources:{type:"object",properties:{limits:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},pids:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}},reservations:{type:"object",properties:{cpus:{type:["number","string"]},memory:{type:"string"},generic_resources:{$ref:"#/definitions/generic_resources"},devices:{$ref:"#/definitions/devices"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},restart_policy:{type:"object",properties:{condition:{type:"string"},delay:{$ref:"#/definitions/duration_format"},max_attempts:{type:"integer"},window:{$ref:"#/definitions/duration_format"}},additionalProperties:!1,patternProperties:{"^x-":{}}},placement:{type:"object",properties:{constraints:{type:"array",items:{type:"string"}},preferences:{type:"array",items:{type:"object",properties:{spread:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},max_replicas_per_node:{type:"integer"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},patternProperties:{"^x-":{}},additionalProperties:!1},generic_resources:{$id:"#/definitions/generic_resources",type:"array",items:{type:"object",properties:{discrete_resource_spec:{type:"object",properties:{kind:{type:"string"},value:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},devices:{$id:"#/definitions/devices",type:"array",items:{type:"object",properties:{capabilities:{$ref:"#/definitions/list_of_strings"},count:{anyOf:[{type:"string"},{type:"integer"}]},device_ids:{$ref:"#/definitions/list_of_strings"},driver:{type:"string"},options:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}}},include:{$id:"#/definitions/include",oneOf:[{type:"string"},{type:"object",properties:{path:{$ref:"#/definitions/string_or_list"},env_file:{$ref:"#/definitions/string_or_list"},project_directory:{type:"string"}},additionalProperties:!1}]},network:{$id:"#/definitions/network",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},ipam:{type:"object",properties:{driver:{type:"string"},config:{type:"array",items:{type:"object",properties:{subnet:{anyOf:[{$ref:"#/definitions/ipv4_subnet_format"},{$ref:"#/definitions/ipv6_subnet_format"}]},ip_range:{type:"string"},gateway:{type:"string"},aux_addresses:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}}},options:{type:"object",additionalProperties:!1,patternProperties:{"^.+$":{type:"string"}}}},additionalProperties:!1,patternProperties:{"^x-":{}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},internal:{type:"boolean"},enable_ipv6:{type:"boolean"},attachable:{type:"boolean"},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},volume:{$id:"#/definitions/volume",type:["object","null"],properties:{name:{type:"string"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},labels:{$ref:"#/definitions/list_or_dict"}},additionalProperties:!1,patternProperties:{"^x-":{}}},secret:{$id:"#/definitions/secret",type:"object",properties:{name:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},driver:{type:"string"},driver_opts:{type:"object",patternProperties:{"^.+$":{type:["string","number"]}}},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},config:{$id:"#/definitions/config",type:"object",properties:{name:{type:"string"},content:{type:"string"},environment:{type:"string"},file:{type:"string"},external:{type:["boolean","object"],properties:{name:{deprecated:!0,type:"string"}}},labels:{$ref:"#/definitions/list_or_dict"},template_driver:{type:"string"}},additionalProperties:!1,patternProperties:{"^x-":{}}},command:{oneOf:[{type:"null"},{type:"string"},{type:"array",items:{type:"string"}}]},env_file:{oneOf:[{type:"string"},{type:"array",items:{oneOf:[{type:"string"},{type:"object",additionalProperties:!1,properties:{path:{type:"string"},required:{type:"boolean",default:!0}},required:["path"]}]}}]},string_or_list:{oneOf:[{type:"string"},{$ref:"#/definitions/list_of_strings"}]},list_of_strings:{type:"array",items:{type:"string"},uniqueItems:!0},duration_format:{type:"string",pattern:"^([0-9]+h)?([0-9]+m)?([0-9]+s)?([0-9]+ms)?([0-9]+us)?([0-9]+ns)?$"},expose_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?(/tcp|udp)?$"},port_published_format:{type:"string",pattern:"^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4}))(-((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0][0-9]{1,4})|([0-9]{1,4})))?$"},port_format:{type:"integer",minimum:0,maximum:65535},ipv6_subnet_format:{type:"string",pattern:"(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))/(?:\\d|[12]\\d|3[01])"},ipv4_subnet_format:{type:"string",pattern:"((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}/(?:\\d|[12]\\d|3[01])"},list_or_dict:{oneOf:[{type:"object",patternProperties:{".+":{type:["string","number","boolean","null"]}},additionalProperties:!1},{type:"array",items:{type:"string"},uniqueItems:!0}]},blkio_limit:{type:"object",properties:{path:{type:"string"},rate:{type:["integer","string"]}},additionalProperties:!1},blkio_weight:{type:"object",properties:{path:{type:"string"},weight:{type:"integer"}},additionalProperties:!1},service_config_or_secret:{type:"array",items:{oneOf:[{type:"string"},{type:"object",properties:{source:{type:"string"},target:{type:"string"},uid:{type:"string"},gid:{type:"string"},mode:{type:"number"}},additionalProperties:!1,patternProperties:{"^x-":{}}}]}},ulimits:{type:"object",patternProperties:{"^[a-z]+$":{oneOf:[{type:"integer"},{type:"object",properties:{hard:{type:"integer"},soft:{type:"integer"}},required:["soft","hard"],additionalProperties:!1,patternProperties:{"^x-":{}}}]}}},constraints:{service:{$id:"#/definitions/constraints/service",anyOf:[{required:["build"]},{required:["image"]}],properties:{build:{required:["context"]}}}}}};async function l(){return z.object({manifestVersion:z.number().refine((e=>1===e||1.1===e||1.2===e),{message:"The manifest version can either be '1' or '1.1'"}),id:z.string().refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the app repository"}),disabled:z.boolean().optional(),name:z.string().min(1).max(50),tagline:z.string().min(1).max(100).refine((async e=>!(e.endsWith(".")&&2===e.split(".").length)),{message:"Taglines should not end with a period"}),icon:z.string().optional(),category:z.enum(["files","bitcoin","media","networking","social","automation","finance","ai","developer"]),version:z.string().min(1),port:z.number().int().min(0).max(65535),description:z.string().min(1).max(5e3),developer:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),website:z.string().url(),submitter:z.preprocess((e=>null==e?e:String(e)),z.string().min(1).max(50)),submission:z.string().url(),repo:z.union([z.string().url(),z.literal("")]).optional(),support:z.string().url(),gallery:z.string().array(),releaseNotes:z.string().min(0).max(5e3).optional(),dependencies:z.string().array(),permissions:z.enum(["STORAGE_DOWNLOADS"]).array().optional(),path:z.string().refine((e=>function(e){try{return new URL(e),!0}catch{return!1}}(`https://example.com${e}`))),defaultUsername:z.string().optional().or(z.literal("")),defaultPassword:z.string().optional().or(z.literal("")),deterministicPassword:z.boolean().optional(),optimizedForUmbrelHome:z.boolean().optional(),torOnly:z.boolean().optional(),installSize:z.number().int().min(0).optional(),widgets:z.any().array().optional(),defaultShell:z.string().optional()}).refine((e=>!e.dependencies?.includes(e.id)),{message:"Dependencies can't include its own app id"})}function c(e,t){const s=new dist.LineCounter,n=new dist.Parser(s.addNewLine),[o]=n.parse(e);return function e(t,i){switch(t.type){case"document":return e(t.value,i);case"block-map":for(const r of t.items)if(r.key&&"source"in r.key&&r.key.source===i[0]){if(1===i.length){const e=s.linePos(r.key.offset);if(r.value&&"end"in r.value&&r.value.end&&r.value.end[0]){const t=s.linePos(r.value.offset),i=s.linePos(r.value.end[0].offset);return e.line===i.line?{line:{start:e.line,end:e.line},column:{start:t.col,end:i.col}}:{line:{start:e.line,end:i.line}}}return{line:{start:e.line,end:e.line}}}return r.value?(i.splice(0,1),e(r.value,i)):void 0}break;case"block-seq":{const r=parseInt(String(i[0]));if(isNaN(r))return;if(r<0||r>=t.items.length)return;const n=t.items[r];if(!n||!n.value)return;if(1===i.length){const e=s.linePos(n.value.offset);if("end"in n.value&&n.value.end&&n.value.end[0]){const t=s.linePos(n.value.end[0].offset);return e.line===t.line?{line:{start:e.line,end:e.line},column:{start:e.col,end:t.col}}:{line:{start:e.line,end:t.line}}}return{line:{start:e.line,end:e.line}}}if(n.value)return i.splice(0,1),e(n.value,i);break}}}(o,t)}const d=new Map;async function m(e){const t=d.get(e.APIHost);if(t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);const i=await fetch(`https://${e.APIHost}/v2/`,{signal:t.signal});if(!("registry/2.0"===i.headers.get("Docker-Distribution-Api-Version")))throw new Error(`"${e.APIHost}" is not a valid CNCF distribution registry`);let r;if(401===i.status){const e=i.headers.get("Www-Authenticate");if(!e)throw new Error(`Missing auth header for "${i.url}"`);r=function(e){if(!e.startsWith("Bearer"))throw new Error(`Only Bearer token authorization is supported: ${e}`);const t=e.match(/realm="(.*?)"/)?.[1];if(!t)throw new Error(`Failed to get realm from auth header: ${e}`);const i=e.match(/service="(.*?)"/)?.[1];if(!i)throw new Error(`Failed to get service from auth header: ${e}`);const r=e.match(/scope="(.*?)"/)?.[1];return{realm:t,service:i,scope:r}}(e)}const s={host:e.APIHost,auth:r};return d.set(e.APIHost,s),s}catch(t){throw d.set(e.APIHost,!1),t}}async function y(e,t,i){const r=await async function(e){const t=await m(e);if(!t.auth)return;const i=new URL(t.auth.realm);i.searchParams.set("service",t.auth.service),i.searchParams.set("scope",`repository:${e.APIPath}:pull`);const r=await fetch(i);return(await r.json()).token}(e),s=new Headers(i?.headers);return r&&s.append("Authorization",`Bearer ${r}`),fetch(t,{...i,headers:s})}async function f(e){const t=await async function(e){const t=new Headers;t.append("Accept","application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json");const i=await y(e,`https://${e.APIHost}/v2/${e.APIPath}/manifests/${e.digest?encodeURIComponent(e.digest):e.tag}`,{headers:t});if(!i.ok)throw new Error(`HTTP ${i.status} for ${e.toString()}: ${await i.text()}`);const r=await i.json(),s=i.headers.get("Content-Type");switch(s){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return r;default:throw new Error(`Unsupported content type: ${s}`)}}(e);switch(t.mediaType){case"application/vnd.oci.image.manifest.v1+json":case"application/vnd.docker.distribution.manifest.v2+json":return[];case"application/vnd.oci.image.index.v1+json":case"application/vnd.docker.distribution.manifest.list.v2+json":return t.manifests.map((e=>({os:e.platform.os,architecture:e.platform.architecture,variant:e.platform.variant})))}}class u{#e;#t;#i;#r;constructor({host:e,path:t,tag:i,digest:r}){this.#e=e,this.#t=t,this.#i=i,this.#r=r}static#s(e){return"docker.io"===e?"registry.hub.docker.com":e}static async fromString(e){const t=/^(?<path>[a-z0-9_.:-]+?(?:\/[a-z0-9_.-]+)*)(?::(?<tag>[a-zA-Z0-9_.-]+))?(?!.*(?<!.*@.*):)(?:@(?<digest>[a-z0-9]+:[0-9a-f]{64}))?$/m.exec(e);if(!t||!t.groups)throw new Error(`Invalid image format: ${e}`);let i=t.groups.path;const{tag:r,digest:s}=t.groups,n=i.split("/");if(1===n.length)return new u({host:void 0,path:i,tag:r,digest:s});let o;return await u.isRegistry(n[0])&&(o=n[0],i=n.slice(1).join("/")),new u({host:o,path:i,tag:r,digest:s})}static#n=new Map;static async isRegistry(e){e=u.#s(e);const t=u.#n.get(e);if("boolean"==typeof t)return t;try{const t=new AbortController;setTimeout((()=>t.abort()),1e3);return"registry/2.0"===(await fetch(`https://${e}/v2/`,{signal:t.signal})).headers.get("Docker-Distribution-Api-Version")}catch{return u.#n.set(e,!1),!1}}get host(){return this.#e||"docker.io"}get APIHost(){return u.#s(this.host)}get path(){return this.#t}get APIPath(){const e=this.path;return e.includes("/")?e:`library/${this.#t}`}get tag(){return this.#i||"latest"}get digest(){return this.#r}toString(){let e=this.#t;return this.#e&&(e=`${this.#e}/${e}`),this.#i&&(e=`${e}:${this.#i}`),this.#r&&(e=`${e}@${this.#r}`),e}toFullString(){return`${this.host}/${this.path}:${this.tag}${this.digest?`@${this.digest}`:""}`}}async function g(e){let i;try{i=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app-store.yml is not a valid YAML file",message:String(e),file:"umbrel-app-store.yml"}]}const r=await async function(){return z.object({id:z.string().min(1).max(50).refine((e=>!e.startsWith("umbrel-app-store")),{message:"The id of the app can't start with 'umbrel-app-store' as it is the id of the official Umbrel App Store."}).refine((e=>/^[a-z]+(?:-[a-z]+)*$/.test(e)),{message:"The id of the app should contain only alphabets ('a' to 'z') and dashes ('-')."}),name:z.string().min(1).max(50)})}(),n=await r.safeParseAsync(i);return n.success?[]:n.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:"umbrel-app-store.yml"})))}async function h(e,i,r={}){let s;try{s=dist.parse(e)}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"umbrel-app.yml is not a valid YAML file",message:String(e),file:`${i}/umbrel-app.yml`}]}const n=await l(),o=await n.safeParseAsync(s);let a=[];if(o.success||(a=o.error.issues.map((t=>({id:t.code,propertiesPath:t.path.join("."),...c(e,t.path),severity:"error",title:t.path.join("."),message:t.message,file:`${i}/umbrel-app.yml`})))),r.isNewAppSubmission&&r.pullRequestUrl&&s.submission!==r.pullRequestUrl&&a.push({id:"invalid_submission_field",severity:"error",propertiesPath:"submission",...c(e,["submission"]),title:`Invalid submission field "${s.submission}"`,message:`The submission field must be set to the URL of this pull request: ${r.pullRequestUrl}`,file:`${i}/umbrel-app.yml`}),r.isNewAppSubmission&&"string"==typeof s.releaseNotes&&s.releaseNotes.length>0&&a.push({id:"filled_out_release_notes_on_first_submission",severity:"error",propertiesPath:"releaseNotes",...c(e,["releaseNotes"]),title:'"releaseNotes" needs to be empty for new app submissions',message:'The "releaseNotes" field must be empty for new app submissions as it is being displayed to the user only in case of an update.',file:`${i}/umbrel-app.yml`}),r.isNewAppSubmission){const t=s.icon,r=s.gallery;(t&&String(t).length>0||Array.isArray(r)&&r.length>0)&&a.push({id:"filled_out_icon_or_gallery_on_first_submission",severity:"warning",propertiesPath:t?"icon":"gallery",...c(e,t?["icon"]:["gallery"]),title:'"icon" and "gallery" needs to be empty for new app submissions',message:'The "icon" and "gallery" fields must be empty for new app submissions as it is being created by the Umbrel team.',file:`${i}/umbrel-app.yml`})}if(r.allUmbrelAppYmlContents){const n=new Map;for(const e of r.allUmbrelAppYmlContents){let r;try{r=dist.parse(e)}catch{continue}"object"==typeof r&&null!==r&&("port"in r&&"number"==typeof r.port&&"name"in r&&"string"==typeof r.name&&"id"in r&&"string"==typeof r.id&&r.id!==i&&n.set(r.port,`${r.name} (${r.id})`))}if(n.has(s.port)){const t=n.get(s.port);a.push({id:"duplicate_ui_port",severity:"error",propertiesPath:"port",...c(e,["port"]),title:`Port ${s.port} is already used by ${t}`,message:"Each app must use a unique port",file:`${i}/umbrel-app.yml`})}}return a}async function _(i,r,s,l={}){const d=await a(i);let m,y;try{m=dist.parse(i,{merge:!0}),y=dist.parse(d,{merge:!0})}catch(e){return[{id:"invalid_yaml_syntax",severity:"error",title:"docker-compose.yml is not a valid YAML file",message:String(e),file:`${r}/docker-compose.yml`}]}const g=new ajv({allowUnionTypes:!0});ajv_formats_dist(g);const h=g.compile(p);if(!h(y))return(h.errors??[]).map((t=>({id:t.keyword,propertiesPath:external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean).join("."),...c(i,external_node_path_namespaceObject.normalize(t.instancePath).split(external_node_path_namespaceObject.sep).filter(Boolean)),severity:"error",title:t.instancePath,message:t.message??"Unknown error",file:`${r}/docker-compose.yml`})));const _=[],v=Object.keys(m.services??{}),b=Object.keys(y.services??{});for(const e of b){const t=y.services?.[e].image;if(!t)continue;const s=t.match(/^(.+):(.+)@(.+)$/);if(s){const[,t]=s.slice(1);"latest"===t&&_.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"warning",title:`Invalid image tag "${t}"`,message:'Images should not use the "latest" tag',file:`${r}/docker-compose.yml`})}else _.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${t}"`,message:'Images should be named like "<name>:<version-tag>@<sha256>"',file:`${r}/docker-compose.yml`})}for(const e of b){const t=y.services?.[e].environment,s=y.services?.[e].labels,n=y.services?.[e].extra_hosts,o=[];t&&!Array.isArray(t)&&o.push({label:"environment",entries:Object.entries(t)}),s&&!Array.isArray(s)&&o.push({label:"labels",entries:Object.entries(s)}),n&&!Array.isArray(n)&&o.push({label:"extra_hosts",entries:Object.entries(n)});for(const t of o)for(const[s,n]of t.entries)"boolean"==typeof n&&_.push({id:"invalid_yaml_boolean_value",propertiesPath:`services.${e}.${t.label}.${s}`,...c(i,["services",e,t.label,s]),severity:"error",title:`Invalid YAML boolean value for key "${s}"`,message:`Boolean values should be strings like "${n}" instead of ${n}`,file:`${r}/docker-compose.yml`})}for(const e of v){const t=m.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s?s.match(/\$\{?APP_DATA_DIR\}?\/?:/)&&_.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "\${APP_DATA_DIR}/data${s.split(":")[1]??""}" instead.`,file:`${r}/docker-compose.yml`}):"object"==typeof s&&"source"in s&&"target"in s&&s.source.match(/\$\{?APP_DATA_DIR\}?\/?$/)&&_.push({id:"invalid_app_data_dir_volume_mount",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"warning",title:`Volume "${s.source}:${s.target}"`,message:`Volumes should not be mounted directly into the "\${APP_DATA_DIR}" directory! Please use a subdirectory like "source: \${APP_DATA_DIR}/data" and "target: ${s.target??"/some/dir"}" instead.`,file:`${r}/docker-compose.yml`})}for(const e of v){const t=m.services?.[e]?.volumes;if(t&&Array.isArray(t))for(const n of t)if("string"==typeof n){if(n.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.match(/\$\{?APP_DATA_DIR\}?\/?(.*?):/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||_.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}else if("object"==typeof n&&"source"in n&&"target"in n&&n.source.match(/\$\{?APP_DATA_DIR\}?/)){const t=n.source.match(/\$\{?APP_DATA_DIR\}?\/?(.*?)$/)?.[1];if(!t)continue;s.map((e=>e.path)).includes(`${r}/${t}`)||_.push({id:"missing_file_or_directory",propertiesPath:`services.${e}.volumes`,...c(i,["services",e,"volumes"]),severity:"info",title:`Mounted file/directory "/${r}/${t}" doesn't exist`,message:`The volume "${n.source}:${n.target}" tries to mount the file/directory "/${r}/${t}", but it is not present. This can lead to permission errors!`,file:`${r}/docker-compose.yml`})}}for(const e of v){const t=m.services?.[e].ports;if(t&&Array.isArray(t))for(const s of t)"string"==typeof s||"number"==typeof s?_.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s}"`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`}):"object"==typeof s&&"target"in s&&_.push({id:"external_port_mapping",propertiesPath:`services.${e}.ports`,...c(i,["services",e,"ports"]),severity:"info",title:`External port mapping "${s.target}${s.published?`:${s.published}`:""}`,message:"Port mappings may be unnecessary for the app to function correctly. Docker's internal DNS resolves container names to IP addresses within the same network. External access to the web interface is handled by the app_proxy container. Port mappings are only needed if external access is required to a port not proxied by the app_proxy, or if an app needs to expose multiple ports for its functionality (e.g., DHCP, DNS, P2P, etc.).",file:`${r}/docker-compose.yml`})}if(l.checkImageArchitectures)for(const e of v){const t=m.services?.[e].image;if(!t)continue;let s;try{s=await u.fromString(t)}catch(e){_.push({id:"invalid_docker_image_name",severity:"error",title:"Invalid image name",message:String(e),file:`${r}/docker-compose.yml`});continue}try{const t=await f(s);t.find((e=>"linux"===e.os&&"arm64"===e.architecture))&&t.find((e=>"linux"===e.os&&"amd64"===e.architecture))||_.push({id:"invalid_image_architectures",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image architectures for image "${s}"`,message:`The image "${s}" does not support the architectures "arm64" and "amd64". Please make sure that the image supports both architectures.`,file:`${r}/docker-compose.yml`})}catch(t){_.push({id:"invalid_docker_image_name",propertiesPath:`services.${e}.image`,...c(i,["services",e,"image"]),severity:"error",title:`Invalid image name "${s}"`,message:String(t),file:`${r}/docker-compose.yml`})}}for(const e of b){if("app_proxy"===e)continue;const t=y.services?.[e].user,s=y.services?.[e].environment;let n=!1;if(s)if(Array.isArray(s))(s.includes("UID=1000")||s.includes("PUID=1000"))&&(n=!0);else for(const[e,t]of Object.entries(s))"UID"!==e&&"PUID"!==e||"1000"===String(t)&&(n=!0);"root"===t?_.push({id:"invalid_container_user",propertiesPath:`services.${e}.user`,...c(i,["services",e,"user"]),severity:"info",title:`Using unsafe user "${t}" in service "${e}"`,message:`The user "${t}" can lead to security vulnerabilities. If possible please use a non-root user instead.`,file:`${r}/docker-compose.yml`}):t||n||_.push({id:"invalid_container_user",severity:"info",title:`Potentially using unsafe user in service "${e}"`,message:'The default container user "root" can lead to security vulnerabilities. If you are using the root user, please try to specify a different user (e.g. "1000:1000") in the compose file or try to set the UID/PUID and GID/PGID environment variables to 1000.',file:`${r}/docker-compose.yml`})}for(const e of b){const t=y.services?.[e].network_mode;"host"===t&&_.push({id:"container_network_mode_host",propertiesPath:`services.${e}.network_mode`,...c(i,["services",e,"network_mode"]),severity:"info",title:`Service "${e}" uses host network mode`,message:"The host network mode can lead to security vulnerabilities. If possible please use the default bridge network mode and expose the necessary ports.",file:`${r}/docker-compose.yml`})}const $=new Set;for(const e of v){if("app_proxy"===e)continue;const t=m.services?.[e]?.hostname;t&&$.add(t);const i=m.services?.[e]?.container_name;i&&$.add(i)}for(const e of v)if("app_proxy"===e){const t=m.services?.[e].environment,s=new Map;if(Array.isArray(t))for(const e of t){const[t,i]=e.split("=");s.set(t,i)}else if("object"==typeof t)for(const[e,i]of Object.entries(t))s.set(e,String(i));if(s.has("APP_HOST")){const t=String(s.get("APP_HOST"));if(!t.startsWith("$")&&!$.has(t)){const[s,n,o]=t.split("_");s===r.toLowerCase()&&b.includes(n)&&"1"===o||_.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"warning",title:"Invalid APP_HOST environment variable",message:'The APP_HOST environment variable must be set to the hostname of the app_proxy container (e.g. "<app-id>_<web-container-name>_1").',file:`${r}/docker-compose.yml`})}}else _.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"error",title:"Missing APP_HOST environment variable",message:'The app_proxy container needs to have the APP_HOST environment variable set to the hostname of the app_proxy container (e.g. "<app-id>_<web-container-name>_1").',file:`${r}/docker-compose.yml`});s.has("APP_PORT")?isNaN(Number(s.get("APP_PORT")))&&(s.get("APP_PORT")?.startsWith("$")||_.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"warning",title:"Invalid APP_PORT environment variable",message:"The APP_PORT environment variable must be set to the port the ui of the app inside the container is listening on.",file:`${r}/docker-compose.yml`})):_.push({id:"invalid_app_proxy_configuration",propertiesPath:`services.${e}.environment`,...c(i,["services",e,"environment"]),severity:"error",title:"Missing APP_PORT environment variable",message:"The app_proxy container needs to have the APP_PORT environment variable set to the port the ui of the app inside the container is listening on.",file:`${r}/docker-compose.yml`})}for(const e of b){if("app_proxy"===e)continue;const t=y.services?.[e].restart;t&&"on-failure"!==t&&_.push({id:"invalid_restart_policy",propertiesPath:`services.${e}.restart`,...c(i,["services",e,"restart"]),severity:"warning",title:"Invalid restart policy",message:`The restart policy of the container "${e}" should be set to "on-failure".`,file:`${r}/docker-compose.yml`})}return _}function v(e){const t=e.filter((e=>"directory"===e.type)).filter((t=>!e.some((e=>e.path.length>t.path.length&&e.path.startsWith(t.path))))),i=[];for(const e of t)i.push({id:"empty_app_data_directory",severity:"error",title:`Empty directory "${e.path}"`,message:`Please add a ".gitkeep" file to the directory "${e.path}". This is necessary to ensure the correct permissions of the directory after cloning!`,file:e.path});return i}z.setErrorMap(((e,t)=>e.code===z.ZodIssueCode.invalid_type&&"undefined"===e.received?{message:`The "${e.path.join(".")}" key is required`}:{message:t.defaultError}));
 
 
 /***/ }),

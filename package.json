@@ -1,6 +1,6 @@
 {
   "name": "umbrel-github-action",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "private": true,
   "description": "Checks your umbrelOS Apps for issues and provides fixes",
   "author": "Josua Frank",
@@ -21,14 +21,14 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
-    "@zip.js/zip.js": "^2.7.53",
-    "umbrel-cli": "^0.5.1"
+    "@zip.js/zip.js": "^2.7.60",
+    "umbrel-cli": "^0.5.3"
   },
   "devDependencies": {
-    "@types/node": "^22.9.0",
+    "@types/node": "^22.14.1",
     "@vercel/ncc": "^0.38.3",
-    "prettier": "^3.3.3",
-    "typescript": "^5.6.3"
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
   },
   "type": "module"
 }
