@@ -12,7 +12,7 @@ The linting result will be published as annotations, a job summary and a Pull Re
 name: CI
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - main
 
