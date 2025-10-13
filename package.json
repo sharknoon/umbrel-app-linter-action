@@ -21,14 +21,14 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.1",
-    "@zip.js/zip.js": "^2.7.72",
-    "umbrel-cli": "^0.6.0"
+    "@zip.js/zip.js": "^2.8.7",
+    "umbrel-cli": "^0.6.3"
   },
   "devDependencies": {
-    "@types/node": "^24.3.0",
-    "@vercel/ncc": "^0.38.3",
+    "@types/node": "^24.7.2",
+    "@vercel/ncc": "^0.38.4",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "type": "module"
 }

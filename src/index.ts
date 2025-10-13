@@ -121,7 +121,7 @@ try {
     const zipReader = new ZipReader(data as ReadableStream<Uint8Array>);
     const entries = await zipReader.getEntries();
     for (const entry of entries) {
-      if (entry.filename.endsWith("umbrel-app.yml")) {
+      if (!entry.directory && entry.filename.endsWith("umbrel-app.yml")) {
         const content = await entry.getData!(new TextWriter());
         umbrelAppYmlsContent.push(content);
       }
