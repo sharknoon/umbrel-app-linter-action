@@ -1,6 +1,6 @@
 {
   "name": "umbrel-github-action",
-  "version": "1.7.2",
+  "version": "1.7.1",
   "private": true,
   "description": "Checks your umbrelOS Apps for issues and provides fixes",
   "author": "Josua Frank",
