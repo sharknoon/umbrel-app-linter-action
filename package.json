@@ -19,15 +19,15 @@
     "prepare": "npm run build"
   },
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.1",
-    "@zip.js/zip.js": "^2.8.7",
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
+    "@zip.js/zip.js": "^2.8.23",
     "umbrel-cli": "^0.6.4"
   },
   "devDependencies": {
-    "@types/node": "^24.7.2",
+    "@types/node": "^25.5.0",
     "@vercel/ncc": "^0.38.4",
-    "prettier": "^3.6.2",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   },
   "type": "module"

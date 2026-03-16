@@ -2,7 +2,7 @@ name: "Umbrel App Linter"
 author: "Josua Frank"
 description: "This is a small GitHub Action for linting umbrelOS apps"
 runs:
-  using: "node20"
+  using: "node24"
   main: "dist/index.js"
 inputs:
   github-token:
